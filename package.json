@@ -1,0 +1,58 @@
+{
+  "name": "as-plan",
+  "version": "1.0.0",
+  "description": "planning tester",
+  "scripts": {
+    "start": "npm run build && npm run watch",
+    "build": "npm run build-ts && npm run tslint",
+    "serve": "nodemon dist/index.js tata toto",
+    "build-ts": "tsc",
+    "watch-ts": "tsc -w",
+    "tslint": "tslint -c tslint.json -p tsconfig.json",
+    "serve-debug": "nodemon --inspect dist/index.js",
+    "test": "jest --forceExit",
+    "watch-debug": "concurrently -k -p \"[{name}]\" -n \"TypeScript,Node\" -c \"cyan.bold,green.bold\" \"npm run watch-ts\" \"npm run serve-debug\"",
+    "watch": "concurrently -k -p \"[{name}]\" -n \"TypeScript,Node\" -c \"cyan.bold,green.bold\" \"npm run watch-ts\" \"npm run serve\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PBM42/as-plan.git"
+  },
+  "keywords": [
+    "planning"
+  ],
+  "author": "PBM42",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/PBM42/as-plan/issues"
+  },
+  "homepage": "https://github.com/PBM42/as-plan#readme",
+  "jest": {
+    "transform": {
+      ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx|js)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ],
+    "testEnvironment": "node"
+  },
+  "dependencies": {
+    "rxjs": "5.4.2",
+    "winston": "2.3.1"
+  },
+  "devDependencies": {
+    "@types/jest": "20.0.6",
+    "@types/node": "8.0.19",
+    "@types/winston": "2.3.4",
+    "concurrently": "3.5.0",
+    "jest": "20.0.4",
+    "nodemon": "1.11.0",
+    "ts-jest": "20.0.10",
+    "tslint": "5.5.0",
+    "typescript": "2.4.2"
+  }
+}
