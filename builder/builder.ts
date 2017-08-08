@@ -1,4 +1,4 @@
-import { logger } from "../index";
+import { logger } from "../logger";
 
 export class Builder {
   constructor(data: any) {
