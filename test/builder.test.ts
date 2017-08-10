@@ -1,4 +1,4 @@
-import {  } from 'jest';
+import { } from 'jest';
 
 import Builder from '../builder/Builder';
 import { Query } from '../queries/query.interface';
@@ -94,7 +94,7 @@ describe('builder', () => {
       kind: QueryKind.Placeholder,
     }];
     builder.build(queries).subscribe((planning: Plan[]) => {
-      expect(planning).toHaveLength(11);      
+      expect(planning).toHaveLength(11);
       done();
     });
   });

@@ -21,8 +21,3 @@ fileToJson(process.argv[2])
   .catch((err: string) => { throw new Error(err); })
   .map((queries: Query[]) => new Builder().build(queries))
   .subscribe(builder => asLogger.info(builder.toString()));
-
-
-process.argv.forEach((val, index) => {
-  asLogger.info(`toto[${index}]: ${val}`);
-});
