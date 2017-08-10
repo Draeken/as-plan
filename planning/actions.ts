@@ -1,18 +1,17 @@
-import Environment from '../builder/Environment';
+import { PlanAgentInit, BoundName } from './plan.interface';
 
 export class PushPlan {
-  constructor(public power: number, public planName: string) {}
+  constructor(public power: number, public planName: string, public bound: BoundName) {}
 }
 
 export class InitPlan {
-  constructor(public environment: Environment) {}
+  constructor(public newPlan: PlanAgentInit) {}
 }
 
 export class SplitPlan {
   constructor(
     public legacyName: string,
-    public newNames: string[],
-    public environment: Environment,
+    public newPlans: PlanAgentInit[],
   ) {}
 }
 

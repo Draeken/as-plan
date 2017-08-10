@@ -2,33 +2,43 @@ import { Subject } from 'rxjs/Subject';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { Observable } from 'rxjs/Observable';
 import 'rxjs/add/operator/scan';
+import 'rxjs/add/operator/distinctUntilChanged';
+import 'rxjs/add/operator/startWith';
 
-import PlanAgent from './PlanAgent';
 import {
   PlanningAction,
   InitPlan,
   PushPlan,
   SplitPlan,
 } from './actions';
+import { IPlanAgent } from './plan.interface';
 
 export default class PlanningState {
   readonly actions = new Subject<PlanningAction>();
 
-  private stateFn: Observable<PlanAgent[]>;
+  private stateFn: Observable<IPlanAgent[]>;
 
-  constructor(initialPlanning: PlanAgent[]) {
+  constructor(initialPlanning: IPlanAgent[]) {
     this.stateFn = this.wrapIntoBehavior(initialPlanning, this.planningHandler(initialPlanning));
   }
 
-  private wrapIntoBehavior(initState: PlanAgent[], obs: Observable<PlanAgent[]>) {
+  get planAgents() {
+    return this.stateFn.distinctUntilChanged();
+  }
+
+  complete() {
+    (<BehaviorSubject<IPlanAgent[]>>this.stateFn).complete();
+  }
+
+  private wrapIntoBehavior(initState: IPlanAgent[], obs: Observable<IPlanAgent[]>) {
     const res = new BehaviorSubject(initState);
     obs.subscribe(s => res.next(s));
     return res;
   }
 
-  private planningHandler(initState: PlanAgent[]): Observable<PlanAgent[]> {
-    return <Observable<PlanAgent[]>>this.actions
-      .scan((state: PlanAgent[], action: PlanningAction) => {
+  private planningHandler(initState: IPlanAgent[]): Observable<IPlanAgent[]> {
+    return <Observable<IPlanAgent[]>>this.actions
+      .scan((state: IPlanAgent[], action: PlanningAction) => {
         if (action instanceof InitPlan) {
           return this.handleInitPlan(state, action);
         } else if (action instanceof PushPlan) {
@@ -40,15 +50,15 @@ export default class PlanningState {
       },    initState);
   }
 
-  private handleInitPlan(state: PlanAgent[], action: PlanningAction): PlanAgent[] {
+  private handleInitPlan(state: IPlanAgent[], action: PlanningAction): IPlanAgent[] {
     return state;
   }
 
-  private handlePushPlan(state: PlanAgent[], action: PlanningAction): PlanAgent[] {
+  private handlePushPlan(state: IPlanAgent[], action: PlanningAction): IPlanAgent[] {
     return state;
   }
 
-  private handleSplitPlan(state: PlanAgent[], action: PlanningAction): PlanAgent[] {
+  private handleSplitPlan(state: IPlanAgent[], action: PlanningAction): IPlanAgent[] {
     return state;
   }
 
