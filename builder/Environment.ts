@@ -8,7 +8,7 @@ export default class Environment {
     readonly start: number,
     readonly end: number,
   ) {
-    this.planAgents.push(new PlanAgent(name, start, end));
+    this.planAgents.push(new PlanAgent({ name, start, end }));
   }
 
 }

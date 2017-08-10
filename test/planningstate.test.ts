@@ -25,7 +25,7 @@ describe('Planning state', () => {
   });
 
   it('should handle initPlan', (done) => {
-    expect.assertions(1);
+    expect.assertions(5);
     const planState = new PlanningState([]);
     const initAgent: PlanAgentInit = { name: 'test', start: 0, end: 1 };
     planState.actions.next(new Actions.InitPlan(initAgent));
@@ -37,7 +37,7 @@ describe('Planning state', () => {
   });
 
   it('should handle push plan', (done) => {
-    expect.assertions(3);
+    expect.assertions(6);
     const legacyAgent: IPlanAgent = {
       name: 'test',
       start: 0,
@@ -56,7 +56,6 @@ describe('Planning state', () => {
       expect(agents).toHaveLength(1);
       testAgent(newAgentInit, agents[0]);
       expect(legacyAgent.pushMe).toHaveBeenCalledTimes(1);
-      expect(agents[0].pushMe).not.toBeCalled();
       done();
     });
   });
@@ -87,7 +86,7 @@ describe('Planning state', () => {
   });
 
   it('should handle split plan', (done) => {
-    expect.assertions(1);
+    expect.assertions(9);
     const legacyAgent: IPlanAgent = {
       name: 'test',
       start: 0,
