@@ -28,9 +28,29 @@ describe('Planning state', () => {
     expect.assertions(5);
     const planState = new PlanningState([]);
     const initAgent: PlanAgentInit = { name: 'test', start: 0, end: 1 };
-    planState.actions.next(new Actions.InitPlan(initAgent));
+    planState.actions.next(new Actions.InitPlans([initAgent]));
     planState.planAgents.subscribe((agents) => {
       expect(agents).toHaveLength(1);
+      testAgent(initAgent, agents[0]);
+      done();
+    });
+  });
+
+  it('should replace existing plan', (done) => {
+    expect.assertions(6);
+    const legacyAgent: IPlanAgent = {
+      name: 'test',
+      start: 0,
+      end: 2,
+      pushMe: jest.fn(),
+      getSatisfaction: jest.fn(),
+    };
+    const planState = new PlanningState([legacyAgent]);
+    const initAgent: PlanAgentInit = { name: 'test', start: 0, end: 1 };
+    planState.actions.next(new Actions.InitPlans([initAgent]));
+    planState.planAgents.subscribe((agents) => {
+      expect(agents).toHaveLength(1);
+      expect(agents[0]).not.toBe(legacyAgent);
       testAgent(initAgent, agents[0]);
       done();
     });
@@ -43,6 +63,7 @@ describe('Planning state', () => {
       start: 0,
       end: 2,
       pushMe: jest.fn(() => newAgentInit),
+      getSatisfaction: jest.fn(),
     };
     const newAgentInit: PlanAgentInit = {
       name: 'test',
@@ -50,7 +71,11 @@ describe('Planning state', () => {
       end: 1,
     };
     const planState = new PlanningState([legacyAgent]);
-    planState.actions.next(new Actions.PushPlan(1, 'test', BoundName.Left));
+    planState.actions.next(new Actions.PushPlans([
+      { power: 1,
+        targetName: 'test',
+        bound: BoundName.Left,
+      }]));
 
     planState.planAgents.subscribe((agents) => {
       expect(agents).toHaveLength(1);
@@ -60,31 +85,6 @@ describe('Planning state', () => {
     });
   });
 
-  it('should not handle non existent push plan', (done) => {
-    expect.assertions(4);
-    const legacyAgent: IPlanAgent = {
-      name: 'test',
-      start: 0,
-      end: 2,
-      pushMe: jest.fn(),
-    };
-    const planState = new PlanningState([legacyAgent]);
-    let totalEmissions = 0;
-    planState.planAgents.subscribe(
-      (agents) => {
-        expect(agents).toHaveLength(1);
-        expect(agents[0]).toBe(legacyAgent);
-        expect(agents[0].pushMe).not.toBeCalled();
-        totalEmissions += 1;
-      },
-      noop, () => {
-        expect(totalEmissions).toBe(1);
-        done();
-      });
-    planState.actions.next(new Actions.PushPlan(1, 'nihil', BoundName.Left));
-    planState.complete();
-  });
-
   it('should handle split plan', (done) => {
     expect.assertions(9);
     const legacyAgent: IPlanAgent = {
@@ -92,6 +92,7 @@ describe('Planning state', () => {
       start: 0,
       end: 2,
       pushMe: jest.fn(),
+      getSatisfaction: jest.fn(),
     };
     const newAgents: PlanAgentInit[] = [
       {

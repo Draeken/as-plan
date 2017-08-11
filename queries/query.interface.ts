@@ -3,7 +3,7 @@ import { GoalKind, QueryKind, RestrictionCondition } from './query.enum';
 export interface Goal {
   kind: GoalKind;
   quantity: number;
-  minutes: number;
+  perTime: number;
   maximize?: boolean;
   timeBetween?: TimeBoundary;
 }
@@ -13,7 +13,6 @@ export interface TimeBoundary {
   target?: number;
   max?: number;
 }
-
 
 export interface TimeRestriction {
   condition: RestrictionCondition;

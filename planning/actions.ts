@@ -1,11 +1,17 @@
 import { PlanAgentInit, BoundName } from './plan.interface';
 
-export class PushPlan {
-  constructor(public power: number, public planName: string, public bound: BoundName) {}
+export interface PushInfo {
+  power: number;
+  targetName: string;
+  bound: BoundName;
 }
 
-export class InitPlan {
-  constructor(public newPlan: PlanAgentInit) {}
+export class PushPlans {
+  constructor(public pushInfos: PushInfo[]) {}
+}
+
+export class InitPlans {
+  constructor(public newPlans: PlanAgentInit[]) {}
 }
 
 export class SplitPlan {
@@ -15,4 +21,4 @@ export class SplitPlan {
   ) {}
 }
 
-export type PlanningAction = PushPlan | InitPlan | SplitPlan;
+export type PlanningAction = PushPlans | InitPlans | SplitPlan;

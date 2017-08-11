@@ -1,14 +1,14 @@
 export interface Plan {
-  name: string;
-  start: number;
-  end: number;
-  children: Plan[];
+  readonly name: string;
+  readonly start: number;
+  readonly end: number;
+  readonly children: Plan[];
 }
 
 export interface PlanAgentInit {
-  name: string;
-  start: number;
-  end: number;
+  readonly name: string;
+  readonly start: number;
+  readonly end: number;
 }
 
 export enum BoundName {
@@ -18,4 +18,5 @@ export enum BoundName {
 
 export interface IPlanAgent extends PlanAgentInit {
   pushMe(bound: BoundName, power: number): PlanAgentInit;
+  getSatisfaction(): number;
 }
