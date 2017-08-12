@@ -11,8 +11,6 @@ function testAgent(init: PlanAgentInit, agent: IPlanAgent): void {
   expect(agent).not.toBe(init);
 }
 
-const noop = () => {};
-
 describe('Planning state', () => {
   it('should create', (done) => {
     expect.assertions(2);

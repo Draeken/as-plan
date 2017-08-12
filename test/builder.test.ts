@@ -15,7 +15,6 @@ beforeEach(() => {
   };
 });
 
-const noop = (data) => { console.log("noop: ", data); };
 describe('builder', () => {
   it('should create', () => {
     expect(builder).toBeTruthy();
@@ -35,16 +34,9 @@ describe('builder', () => {
     const queries: Query[] = [{
       name: 'test',
       kind: QueryKind.Atomic,
-      goal: {
-        kind: GoalKind.Discrete,
-        quantity: 1,
-        perTime: 24,
-      },
+      goal: { kind: GoalKind.Discrete, quantity: 1, perTime: 24 },
       timeRestrictions: {
-        hour: {
-          condition: RestrictionCondition.InRange,
-          ranges: [[18, 23]],
-        },
+        hour: { condition: RestrictionCondition.InRange, ranges: [[18, 23]] },
       },
     }];
     builder.build(queries).subscribe((agents: IPlanAgent[]) => {
@@ -53,6 +45,37 @@ describe('builder', () => {
       expect(agents[0].end).toBeCloseTo(23);
       expect(agents[1].start).toBeCloseTo(24 + 18);
       expect(agents[1].end).toBeCloseTo(24 + 23);
+      done();
+    });
+  });
+
+  it('should handle two goal of 1 per day with inRange restric.', (done) => {
+    expect.assertions(9);
+    const queries: Query[] = [{
+      name: 'test1',
+      kind: QueryKind.Atomic,
+      goal: { kind: GoalKind.Discrete, quantity: 1, perTime: 24 },
+      timeRestrictions: {
+        hour: { condition: RestrictionCondition.InRange, ranges: [[8, 10]] },
+      },
+    },{
+      name: 'test2',
+      kind: QueryKind.Atomic,
+      goal: { kind: GoalKind.Discrete, quantity: 1, perTime: 24 },
+      timeRestrictions: {
+        hour: { condition: RestrictionCondition.InRange, ranges: [[18, 23]] },
+      },
+    }];
+    builder.build(queries).subscribe((agents: IPlanAgent[]) => {
+      expect(agents).toHaveLength(4);
+      expect(agents[0].start).toBeCloseTo(8);
+      expect(agents[0].end).toBeCloseTo(10);
+      expect(agents[1].start).toBeCloseTo(24 + 8);
+      expect(agents[1].end).toBeCloseTo(24 + 10);
+      expect(agents[2].start).toBeCloseTo(18);
+      expect(agents[2].end).toBeCloseTo(23);
+      expect(agents[3].start).toBeCloseTo(24 + 18);
+      expect(agents[3].end).toBeCloseTo(24 + 23);
       done();
     });
   });
