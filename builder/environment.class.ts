@@ -1,13 +1,18 @@
 import PlanningState from '../planning/PlanningState';
-import { InitPlans } from '../planning/actions';
-import { PlanAgentInit } from '../planning/plan.interface';
+import { InitPlans, PlanningAction, SplitPlan } from '../planning/actions';
+import { PlanAgentInit, IPlanAgent } from '../planning/plan.interface';
 import { Query } from '../queries/query.interface';
 import { RestrictionCondition } from '../queries/query.enum';
 
-export class Environment {
-  private zones: { start: number, end: number}[] = [];
+interface zone {
+  start: number;
+  end: number;
+}
 
-  constructor(init: PlanAgentInit, query: Query, private pState: PlanningState) {
+export class Environment {
+  private zones: zone[] = [];
+
+  constructor(private init: PlanAgentInit, query: Query, private pState: PlanningState) {
     if (query.timeRestrictions && query.timeRestrictions.hour) {
       const restrictions = query.timeRestrictions.hour;
       if (restrictions.condition === RestrictionCondition.InRange) {
@@ -21,6 +26,9 @@ export class Environment {
     } else {
       this.zones.push({ start: init.start, end: init.end });
     }
+    // EnvironmentInspection will trigger split action
+    // Environment will react to this to update internal store.
+    this.pState.actions.subscribe(this.handleSplit.bind(this));
     this.pState.actions.next(
       new InitPlans(
         this.zones.map(
@@ -28,7 +36,15 @@ export class Environment {
             ({
               start: zone.start,
               end: zone.end,
-              name: `${init.name}#${zone.start}#${zone.end}`,
+              name: this.nameZone(zone),
             }))));
+  }
+
+  private nameZone({ start, end }: zone): string {
+    return `${this.init.name}#${start}#${end}`;
+  }
+
+  private handleSplit(action: PlanningAction): void {
+    if (!(action instanceof SplitPlan)) { return; }
   }
 }
