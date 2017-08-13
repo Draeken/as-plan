@@ -70,10 +70,10 @@ describe('builder', () => {
       expect(agents).toHaveLength(4);
       expect(agents[0].start).toBeCloseTo(8);
       expect(agents[0].end).toBeCloseTo(10);
-      expect(agents[1].start).toBeCloseTo(24 + 8);
-      expect(agents[1].end).toBeCloseTo(24 + 10);
-      expect(agents[2].start).toBeCloseTo(18);
-      expect(agents[2].end).toBeCloseTo(23);
+      expect(agents[2].start).toBeCloseTo(24 + 8);
+      expect(agents[2].end).toBeCloseTo(24 + 10);
+      expect(agents[1].start).toBeCloseTo(18);
+      expect(agents[1].end).toBeCloseTo(23);
       expect(agents[3].start).toBeCloseTo(24 + 18);
       expect(agents[3].end).toBeCloseTo(24 + 23);
       done();

@@ -78,7 +78,9 @@ private wrapIntoBehavior(initState: IPlanAgent[], obs: Observable<IPlanAgent[]>)
         result.splice(index, 1);
       }
     });
-    return result.concat(...action.newPlans.map(newPlan => new PlanAgent(newPlan)));
+    return result
+      .concat(...action.newPlans.map(newPlan => new PlanAgent(newPlan)))
+      .sort((a, b) => a.start - b.start);
   }
 
   private handlePushPlan(state: IPlanAgent[], action: Action.PushPlans): IPlanAgent[] {
@@ -91,7 +93,7 @@ private wrapIntoBehavior(initState: IPlanAgent[], obs: Observable<IPlanAgent[]>)
       return true;
     });
 
-    return result;
+    return result.sort((a, b) => a.start - b.start);
   }
 
   private handleSplitPlan(state: IPlanAgent[], action: Action.SplitPlan): IPlanAgent[] {
@@ -99,7 +101,7 @@ private wrapIntoBehavior(initState: IPlanAgent[], obs: Observable<IPlanAgent[]>)
     const index = this.indexFromName(result, action.legacyName);
     if (index === -1) { return state; }
     result.splice(index, 1, ...action.newPlans.map(init => new PlanAgent(init)));
-    return result;
+    return result/*.sort((a, b) => a.start - b.start)*/;
   }
 
   private indexFromName(state: IPlanAgent[], name: string): number {
