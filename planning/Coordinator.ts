@@ -15,14 +15,14 @@ export default class Coordinator {
       .observeOn(async)
       .subscribe(
         (agents: PlanAgent[]) => {
-          console.log('test :3');
+          // console.log('test :3');
           const actions = agents
             .map(agent => agent.requestAction(agents))
             .filter(action => action.targetName !== '');
           pState.actions.next(new PushPlans(actions));
         },
         noop, () => {
-          console.log('finish!');
+          // console.log('finish!');
         });
   }
 

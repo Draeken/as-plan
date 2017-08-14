@@ -2,7 +2,6 @@ import { } from 'jest';
 
 import { Query } from '../queries/query.interface';
 import { QueryKind, GoalKind, RestrictionCondition } from '../queries/query.enum';
-import { IPlanAgent, PlanAgentInit, Direction } from '../planning/plan.interface';
 import PlanningState from '../planning/PlanningState';
 import * as Actions from '../planning/actions';
 import { Environment } from '../builder/environment.class';
@@ -50,27 +49,30 @@ describe('environment', () => {
   });
 
   it('should react to split action', (done) => {
-    expect.assertions(2);
+    expect.assertions(3);
     const query: Query = {
       name: 'test',
       kind: QueryKind.Atomic,
       goal: { kind: GoalKind.Continuous, quantity: 20, perTime: 24 },
     };
     const env = new Environment({ name: 'test', start: 0, end: 24 }, query, pState);
-    pState.actions.next(new Actions.SplitPlan('test', [{
-      name: 'test1',
-      start: 0,
-      end: 11,
-    }, {
-      name: 'test2',
-      start: 12,
-      end: 24,
+    pState.actions.next(new Actions.SplitPlans([{
+      legacyName: env.zonesNames[0],
+      newPlans: [{
+        name: 'test1',
+        start: 0,
+        end: 11,
+      }, {
+        name: 'test2',
+        start: 12,
+        end: 24,
+      }],
     }]));
     pState.planAgents.subscribe((agents) => {
       expect(agents).toHaveLength(2);
       expect(agents[0].getSatisfaction()).toBe(1);
+      expect(env.zonesNames).toHaveLength(2);
       done();
     });
   });
-
 });

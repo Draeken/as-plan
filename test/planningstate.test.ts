@@ -105,7 +105,7 @@ describe('Planning state', () => {
       },
     ];
     const planState = new PlanningState([legacyAgent]);
-    planState.actions.next(new Actions.SplitPlan('test', newAgents));
+    planState.actions.next(new Actions.SplitPlans([{ legacyName:'test', newPlans: newAgents }]));
     planState.planAgents.subscribe((agents) => {
       expect(agents).toHaveLength(2);
       agents.forEach((agent, i) => testAgent(newAgents[i], agent));

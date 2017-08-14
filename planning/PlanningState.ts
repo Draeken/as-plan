@@ -35,7 +35,7 @@ export default class PlanningState {
       }).map(([_, b]) => b);
     this.planAgentsComplete.subscribe(
       () => {
-        console.log("complete emit !");
+        // console.log('complete emit !');
         (<Subject<IPlanAgent[]>>this.planAgentsChanged).complete();
       });
   }
@@ -48,11 +48,11 @@ export default class PlanningState {
     return this.planAgentsChanged;
   }
 
-private wrapIntoBehavior(initState: IPlanAgent[], obs: Observable<IPlanAgent[]>) {
-  const res = new BehaviorSubject(initState);
-  obs.subscribe(s => res.next(s));
-  return res;
-}
+  private wrapIntoBehavior(initState: IPlanAgent[], obs: Observable<IPlanAgent[]>) {
+    const res = new BehaviorSubject(initState);
+    obs.subscribe(s => res.next(s));
+    return res;
+  }
 
   private planningHandler(initState: IPlanAgent[]): Observable<IPlanAgent[]> {
     return <Observable<IPlanAgent[]>>this.actions
@@ -62,7 +62,7 @@ private wrapIntoBehavior(initState: IPlanAgent[], obs: Observable<IPlanAgent[]>)
             return this.handleInitPlan(state, action);
           } else if (action instanceof Action.PushPlans) {
             return this.handlePushPlan(state, action);
-          } else if (action instanceof Action.SplitPlan) {
+          } else if (action instanceof Action.SplitPlans) {
             return this.handleSplitPlan(state, action);
           }
           return state;
@@ -87,20 +87,23 @@ private wrapIntoBehavior(initState: IPlanAgent[], obs: Observable<IPlanAgent[]>)
     const result = [...state];
     action.pushInfos.forEach((pushInfo) => {
       const index = this.indexFromName(result, pushInfo.targetName);
-      if (index === -1) { return false; }
+      if (index === -1) { return; }
       const plan = result[index];
       result.splice(index, 1, new PlanAgent(plan.pushMe(pushInfo.bound, pushInfo.power)));
-      return true;
+      return;
     });
 
     return result.sort((a, b) => a.start - b.start);
   }
 
-  private handleSplitPlan(state: IPlanAgent[], action: Action.SplitPlan): IPlanAgent[] {
+  private handleSplitPlan(state: IPlanAgent[], action: Action.SplitPlans): IPlanAgent[] {
     const result = [...state];
-    const index = this.indexFromName(result, action.legacyName);
-    if (index === -1) { return state; }
-    result.splice(index, 1, ...action.newPlans.map(init => new PlanAgent(init)));
+    action.splitInfos.forEach((splitInfo) => {
+      const index = this.indexFromName(result, splitInfo.legacyName);
+      if (index === -1) { return; }
+      result.splice(index, 1, ...splitInfo.newPlans.map(init => new PlanAgent(init)));
+    });
+    // console.log('split: ', ...result.map(r => `${r.name} : ${r.start}/${r.end}`));
     return result/*.sort((a, b) => a.start - b.start)*/;
   }
 

@@ -1,6 +1,8 @@
+import { BehaviorSubject } from 'rxjs/BehaviorSubject';
+import { Observable } from 'rxjs/Observable';
 import PlanningState from './PlanningState';
-import { Direction, PlanAgentInit } from './plan.interface';
-import * as Actions from './actions';
+import { SplitInfo, SplitPlans } from './actions';
+import { Direction, PlanAgentInit, IPlanAgent } from './plan.interface';
 
 interface PlanInfo {
   planName: string;
@@ -13,35 +15,95 @@ interface Node {
 }
 
 export class EnvironmentInspection {
-  private collisionGraph: Node;
+  private newCollisionsEvent: BehaviorSubject<boolean> = new BehaviorSubject(false);
+  private collisions: Node[];
 
-  constructor(pState: PlanningState) {
-    pState.actions.subscribe(this.buildCollisionGraph.bind(this));
+  constructor(private pState: PlanningState) {
+    pState.planAgents.subscribe(this.buildCollisions.bind(this));
   }
 
   getCollisions(plan: PlanAgentInit): PlanInfo[] {
-    return [];
+    return this.collisions
+      .slice(
+        this.collisions.findIndex(node => node.time === plan.start),
+        1 + this.collisions.findIndex(node => node.time === plan.end))
+      .map((node, i, arr) => {
+        if (i > 0 && i < arr.length - 1) { return node.agents; }
+        return node.agents.filter(a => a.planName !== plan.name);
+      })
+      .reduce((acc, cur) => acc.concat(cur), []);
   }
 
-  private buildCollisionGraph(action: Actions.PlanningAction): void {
-    if (action instanceof Actions.InitPlans) {
-      this.handleInitPlan(action);
-    } else if (action instanceof Actions.PushPlans) {
-      this.handlePushPlan(action);
-    } else if (action instanceof Actions.SplitPlan) {
-      this.handleSplitPlan(action);
+  get newCollision() {
+    return this.newCollisionsEvent.filter(v => v) as Observable<boolean>;
+  }
+
+  private buildCollisions(agents: IPlanAgent[]): void {
+    const splitInfos = this.checkForSplitable(agents);
+    if (splitInfos.length > 0) {
+      return this.pState.actions.next(new SplitPlans(splitInfos));
     }
+    this.collisions = agents
+      .map(this.planToNode)
+      .reduce(this.reduceNodes, [])
+      .sort((a, b) => a.time - b.time);
+    this.newCollisionsEvent.next(true);
   }
 
-  private handleInitPlan(action: Actions.InitPlans): void {
-
+  private checkForSplitable(agents: IPlanAgent[]): SplitInfo[] {
+    const result = [...agents];
+    return <SplitInfo[]>result
+      .sort((a, b) => a.start - b.start)
+      .map((agent, i, arr) => {
+        let nextI = i + 1;
+        const cuts = [];
+        while (nextI < arr.length && arr[nextI].start < agent.end) {
+          if (arr[nextI].end < agent.end) {
+            cuts.push(this.middlePoint(arr[nextI]));
+          }
+          nextI += 1;
+        }
+        if (!cuts.length) { return undefined; }
+        const newPlans: PlanAgentInit[] = [
+          { name: `${agent.name}:splitInit`, start: agent.start, end: <number>cuts.shift() },
+        ];
+        cuts.forEach((cut, i) => {
+          newPlans.push({ name: `${agent.name}:split${i}`, start: newPlans[i].end, end: cut });
+        });
+        newPlans.push({
+          name: `${agent.name}:splitFinal`,
+          start: newPlans[newPlans.length - 1].end,
+          end: agent.end,
+        });
+        // console.log('cuts: ', ...newPlans.map(p => `${p.name}: ${p.start} - ${p.end}`));
+        return { newPlans, legacyName: agent.name };
+      }).filter(info => info !== undefined);
   }
 
-  private handlePushPlan(action: Actions.PushPlans): void {
-
+  private middlePoint(plan: IPlanAgent): number {
+    return plan.start + (plan.end - plan.start) / 2;
   }
 
-  private handleSplitPlan(action: Actions.SplitPlan): void {
+  private reduceNodes(acc: Node[], cur: [Node, Node]): Node[] {
+    const result = [...acc];
+    cur.forEach((curNode) => {
+      const simNode = result.find(node => node.time === curNode.time);
+      if (simNode) {
+        simNode.agents.push(...curNode.agents);
+      } else {
+        result.push(curNode);
+      }
+    });
+    return result;
+  }
 
+  private planToNode(plan: IPlanAgent): Node[] {
+    return [{
+      time: plan.start,
+      agents: [{ planName: plan.name, bound: Direction.Left }],
+    }, {
+      time: plan.end,
+      agents: [{ planName: plan.name, bound: Direction.Right }],
+    }];
   }
 }

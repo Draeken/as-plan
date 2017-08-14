@@ -15,7 +15,21 @@ beforeEach(() => {
 
 describe('EIS', () => {
   it('should emit split action', (done) => {
-    expect.assertions(1);
+    expect.assertions(7);
+    pState.actions
+      .filter(action => action instanceof Actions.SplitPlans)
+      .subscribe((action: Actions.SplitPlans) => {
+        expect(action.splitInfos).toHaveLength(1);
+        const splitInfo = action.splitInfos[0];
+        expect(splitInfo.legacyName).toBe('test');
+        expect(splitInfo.newPlans).toHaveLength(2);
+        expect(splitInfo.newPlans[0].start).toBe(0);
+        expect(splitInfo.newPlans[0].end).toBe(11);
+        expect(splitInfo.newPlans[1].start).toBe(11);
+        expect(splitInfo.newPlans[1].end).toBe(24);
+        done();
+      });
+
     pState.actions.next(new Actions.InitPlans([{
       name: 'test',
       start: 0,
@@ -25,16 +39,9 @@ describe('EIS', () => {
       start: 10,
       end: 12,
     }]));
-
-    pState.actions
-      .filter(action => action instanceof Actions.SplitPlan)
-      .subscribe((action: Actions.SplitPlan) => {
-        expect(action.legacyName).toBe('test');
-        done();
-      });
   });
 
-  it('should handle initPlan', (done) => {
+  it('should handle pState change', (done) => {
     pState.actions.next(new Actions.InitPlans([{
       name: 'test1',
       start: 0,
@@ -44,9 +51,12 @@ describe('EIS', () => {
       start: 11,
       end: 15,
     }]));
-    const collisions = eis.getCollisions({ name: 'test1', start: 0, end: 12 });
-    expect(collisions).toHaveLength(1);
-    expect(collisions[0].planName).toBe('test2');
-    expect(collisions[0].bound).toBe(Direction.Right);
+    eis.newCollision.subscribe(() => {
+      const collisions = eis.getCollisions({ name: 'test1', start: 0, end: 12 });
+      expect(collisions).toHaveLength(1);
+      expect(collisions[0].planName).toBe('test2');
+      expect(collisions[0].bound).toBe(Direction.Left);
+      done();
+    });
   });
 });

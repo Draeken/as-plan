@@ -6,6 +6,11 @@ export interface PushInfo {
   bound: Direction;
 }
 
+export interface SplitInfo {
+  legacyName: string;
+  newPlans: PlanAgentInit[];
+}
+
 export class PushPlans {
   constructor(public pushInfos: PushInfo[]) {}
 }
@@ -14,11 +19,8 @@ export class InitPlans {
   constructor(public newPlans: PlanAgentInit[]) {}
 }
 
-export class SplitPlan {
-  constructor(
-    public legacyName: string,
-    public newPlans: PlanAgentInit[],
-  ) {}
+export class SplitPlans {
+  constructor(public splitInfos: SplitInfo[]) {}
 }
 
-export type PlanningAction = PushPlans | InitPlans | SplitPlan;
+export type PlanningAction = PushPlans | InitPlans | SplitPlans;
