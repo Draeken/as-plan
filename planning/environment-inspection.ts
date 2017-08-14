@@ -1,10 +1,10 @@
 import PlanningState from './PlanningState';
-import { BoundName } from './plan.interface';
+import { Direction, PlanAgentInit } from './plan.interface';
 import * as Actions from './actions';
 
 interface PlanInfo {
   planName: string;
-  bound: BoundName;
+  bound: Direction;
 }
 
 interface Node {
@@ -19,7 +19,11 @@ export class EnvironmentInspection {
     pState.actions.subscribe(this.buildCollisionGraph.bind(this));
   }
 
-  buildCollisionGraph(action: Actions.PlanningAction): void {
+  getCollisions(plan: PlanAgentInit): PlanInfo[] {
+    return [];
+  }
+
+  private buildCollisionGraph(action: Actions.PlanningAction): void {
     if (action instanceof Actions.InitPlans) {
       this.handleInitPlan(action);
     } else if (action instanceof Actions.PushPlans) {

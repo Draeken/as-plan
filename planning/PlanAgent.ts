@@ -1,5 +1,5 @@
 import { PushInfo } from './actions';
-import { IPlanAgent, BoundName, PlanAgentInit } from './plan.interface';
+import { IPlanAgent, Direction, PlanAgentInit } from './plan.interface';
 
 export default class PlanAgent implements IPlanAgent {
   readonly start: number;
@@ -14,7 +14,7 @@ export default class PlanAgent implements IPlanAgent {
     this.name = name;
   }
 
-  pushMe(bound: BoundName, power: number): PlanAgentInit {
+  pushMe(bound: Direction, power: number): PlanAgentInit {
     return {
       start: this.start,
       end: this.end,

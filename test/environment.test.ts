@@ -2,7 +2,7 @@ import { } from 'jest';
 
 import { Query } from '../queries/query.interface';
 import { QueryKind, GoalKind, RestrictionCondition } from '../queries/query.enum';
-import { IPlanAgent, PlanAgentInit, BoundName } from '../planning/plan.interface';
+import { IPlanAgent, PlanAgentInit, Direction } from '../planning/plan.interface';
 import PlanningState from '../planning/PlanningState';
 import * as Actions from '../planning/actions';
 import { Environment } from '../builder/environment.class';
@@ -49,21 +49,26 @@ describe('environment', () => {
     });
   });
 
-  it('should split agent when necessary', (done) => {
-    expect.assertions(1);
-    pState.actions.next(new Actions.InitPlans([{
-      name: 'obstacle',
-      start: 5,
-      end: 11,
-    }]));
+  it('should react to split action', (done) => {
+    expect.assertions(2);
     const query: Query = {
       name: 'test',
       kind: QueryKind.Atomic,
-      goal: { kind: GoalKind.Continuous, quantity: 15, perTime: 24 },
+      goal: { kind: GoalKind.Continuous, quantity: 20, perTime: 24 },
     };
     const env = new Environment({ name: 'test', start: 0, end: 24 }, query, pState);
+    pState.actions.next(new Actions.SplitPlan('test', [{
+      name: 'test1',
+      start: 0,
+      end: 11,
+    }, {
+      name: 'test2',
+      start: 12,
+      end: 24,
+    }]));
     pState.planAgents.subscribe((agents) => {
-      expect(agents).toHaveLength(3);
+      expect(agents).toHaveLength(2);
+      expect(agents[0].getSatisfaction()).toBe(1);
       done();
     });
   });

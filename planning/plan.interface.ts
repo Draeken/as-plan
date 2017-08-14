@@ -11,12 +11,12 @@ export interface PlanAgentInit {
   readonly end: number;
 }
 
-export enum BoundName {
+export enum Direction {
   Right,
   Left,
 }
 
 export interface IPlanAgent extends PlanAgentInit {
-  pushMe(bound: BoundName, power: number): PlanAgentInit;
+  pushMe(direction: Direction, power: number): PlanAgentInit;
   getSatisfaction(): number;
 }

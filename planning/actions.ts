@@ -1,9 +1,9 @@
-import { PlanAgentInit, BoundName } from './plan.interface';
+import { PlanAgentInit, Direction } from './plan.interface';
 
 export interface PushInfo {
   power: number;
   targetName: string;
-  bound: BoundName;
+  bound: Direction;
 }
 
 export class PushPlans {

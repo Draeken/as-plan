@@ -2,7 +2,7 @@ import { } from 'jest';
 
 import PlanningState from '../planning/PlanningState';
 import * as Actions from '../planning/actions';
-import { IPlanAgent, PlanAgentInit, BoundName } from '../planning/plan.interface';
+import { IPlanAgent, PlanAgentInit, Direction } from '../planning/plan.interface';
 
 function testAgent(init: PlanAgentInit, agent: IPlanAgent): void {
   expect(agent.start).toBe(init.start);
@@ -72,7 +72,7 @@ describe('Planning state', () => {
     planState.actions.next(new Actions.PushPlans([
       { power: 1,
         targetName: 'test',
-        bound: BoundName.Left,
+        bound: Direction.Left,
       }]));
 
     planState.planAgents.subscribe((agents) => {
