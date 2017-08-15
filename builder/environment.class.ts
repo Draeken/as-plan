@@ -1,6 +1,7 @@
+import { IEnvironment } from './environment.interface';
 import PlanningState from '../planning/PlanningState';
 import { InitPlans, PlanningAction, SplitPlans } from '../planning/actions';
-import { PlanAgentInit, IPlanAgent } from '../planning/plan.interface';
+import { Plan } from '../planning/plan.interface';
 import { Query } from '../queries/query.interface';
 import { RestrictionCondition } from '../queries/query.enum';
 
@@ -10,10 +11,10 @@ interface Zone {
   name: string;
 }
 
-export class Environment {
+export class Environment implements IEnvironment {
   private zones: Zone[] = [];
 
-  constructor(private init: PlanAgentInit, query: Query, private pState: PlanningState) {
+  constructor(private init: Plan, query: Query, private pState: PlanningState) {
     if (query.timeRestrictions && query.timeRestrictions.hour) {
       const restrictions = query.timeRestrictions.hour;
       if (restrictions.condition === RestrictionCondition.InRange) {
@@ -35,7 +36,9 @@ export class Environment {
         name: this.nameZone(init.start, init.end),
       });
     }
-    this.pState.actions.next(new InitPlans(this.zones.map(zone => ({ ...zone }))));
+    this.pState.actions.next(
+      new InitPlans(this.zones.map(zone => ({ ...zone, environment: this }))),
+    );
     // EnvironmentInspection will trigger split action
     // Environment will react to this to update internal store.
     this.pState.actions.subscribe(this.handleSplit.bind(this));

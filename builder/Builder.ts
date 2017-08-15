@@ -8,6 +8,7 @@ import PlanningState from '../planning/PlanningState';
 import Coordinator from '../planning/Coordinator';
 import { IPlanAgent } from '../planning/plan.interface';
 import { EnvironmentManager, EnvConfig } from './environment-manager.class';
+import { EnvironmentInspection } from '../planning/environment-inspection';
 
 
 export default class Builder {
@@ -19,7 +20,8 @@ export default class Builder {
 
   build(queries: Query[]): Observable<IPlanAgent[]> {
     const planningState = new PlanningState([]);
-    const coordinator = new Coordinator(planningState);
+    const eis = new EnvironmentInspection(planningState);
+    new Coordinator(planningState, eis);
     queries.map(query =>
         new EnvironmentManager(this.eConfig, query, planningState));
     return planningState.finalPlanAgents;

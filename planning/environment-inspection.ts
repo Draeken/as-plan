@@ -2,10 +2,10 @@ import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 import { Observable } from 'rxjs/Observable';
 import PlanningState from './PlanningState';
 import { SplitInfo, SplitPlans } from './actions';
-import { Direction, PlanAgentInit, IPlanAgent } from './plan.interface';
+import { Direction, Plan, PlanAgentInit, IPlanAgent } from './plan.interface';
 
 interface PlanInfo {
-  planName: string;
+  targetName: string;
   bound: Direction;
 }
 
@@ -22,14 +22,14 @@ export class EnvironmentInspection {
     pState.planAgents.subscribe(this.buildCollisions.bind(this));
   }
 
-  getCollisions(plan: PlanAgentInit): PlanInfo[] {
+  getCollisions(plan: Plan): PlanInfo[] {
     return this.collisions
       .slice(
         this.collisions.findIndex(node => node.time === plan.start),
         1 + this.collisions.findIndex(node => node.time === plan.end))
       .map((node, i, arr) => {
         if (i > 0 && i < arr.length - 1) { return node.agents; }
-        return node.agents.filter(a => a.planName !== plan.name);
+        return node.agents.filter(a => a.targetName !== plan.name);
       })
       .reduce((acc, cur) => acc.concat(cur), []);
   }
@@ -64,13 +64,21 @@ export class EnvironmentInspection {
           nextI += 1;
         }
         if (!cuts.length) { return undefined; }
-        const newPlans: PlanAgentInit[] = [
-          { name: `${agent.name}:splitInit`, start: agent.start, end: <number>cuts.shift() },
-        ];
-        cuts.forEach((cut, i) => {
-          newPlans.push({ name: `${agent.name}:split${i}`, start: newPlans[i].end, end: cut });
-        });
+        const environment = agent.getEnvironment();
+        const newPlans: PlanAgentInit[] = [{
+          environment,
+          name: `${agent.name}:splitInit`,
+          start: agent.start,
+          end: <number>cuts.shift(),
+        }];
+        cuts.forEach((cut, i) => newPlans.push({
+          environment,
+          name: `${agent.name}:split${i}`,
+          start: newPlans[i].end,
+          end: cut,
+        }));
         newPlans.push({
+          environment,
           name: `${agent.name}:splitFinal`,
           start: newPlans[newPlans.length - 1].end,
           end: agent.end,
@@ -100,10 +108,10 @@ export class EnvironmentInspection {
   private planToNode(plan: IPlanAgent): Node[] {
     return [{
       time: plan.start,
-      agents: [{ planName: plan.name, bound: Direction.Left }],
+      agents: [{ targetName: plan.name, bound: Direction.Left }],
     }, {
       time: plan.end,
-      agents: [{ planName: plan.name, bound: Direction.Right }],
+      agents: [{ targetName: plan.name, bound: Direction.Right }],
     }];
   }
 }
