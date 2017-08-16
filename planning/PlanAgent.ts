@@ -8,6 +8,8 @@ export default class PlanAgent implements IPlanAgent {
   readonly end: number;
   readonly name: string;
   readonly environment: IEnvironment;
+  private satisfaction: number = 1;
+
 
   constructor(
     { start, end, name, environment }: PlanAgentInit,
@@ -29,7 +31,7 @@ export default class PlanAgent implements IPlanAgent {
   }
 
   getSatisfaction(): number {
-    return 1;
+    return this.satisfaction;
   }
 
   getEnvironment(): IEnvironment {
@@ -37,8 +39,17 @@ export default class PlanAgent implements IPlanAgent {
   }
 
   requestAction(eis: EnvironmentInspection): PushInfo[] {
+    this.satisfaction = this.environment.computeSatisfaction(this.name);
     return eis
       .getCollisions({ start: this.start, name: this.name, end: this.end })
-      .map(planInfo => ({ ...planInfo, power: 1 }));
+      .map(planInfo => ({ ...planInfo, power: this.power }));
+  }
+
+  private get power(): number {
+    return this.satisfaction;
+  }
+
+  private get resistance(): number {
+    return this.satisfaction;
   }
 }

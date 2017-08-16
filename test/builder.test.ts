@@ -80,6 +80,28 @@ describe('builder', () => {
     });
   });
 
+  it('should give priority to satisfy continuous goal planAgent', (done) => {
+    expect.assertions(3);
+    builder.eConfig = { minTime: 0, maxTime: 10 };
+    const queries: Query[] = [{
+      name: 'notSatisfied',
+      kind: QueryKind.Atomic,
+      goal: { kind: GoalKind.Continuous, quantity: 8, perTime: 10 },
+    }, {
+      name: 'satisfied',
+      kind: QueryKind.Atomic,
+      goal: { kind: GoalKind.Continuous, quantity: 2, perTime: 10 },
+    }];
+    builder.build(queries).subscribe((agents: IPlanAgent[]) => {
+      expect(agents).toHaveLength(2);
+      const a1Duration = agents[0].end - agents[0].start;
+      const a2Duration = agents[1].end - agents[1].start;
+      expect(a1Duration).toBeCloseTo(8);
+      expect(a2Duration).toBeCloseTo(2);
+      done();
+    });
+  });
+
   it('should handle 1 atomic query with start/end target', (done) => {
     expect.assertions(1);
     const queries: Query[] = [{
