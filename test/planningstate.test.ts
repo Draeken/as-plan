@@ -15,7 +15,9 @@ function testAgent(init: PlanAgentInit, agent: IPlanAgent): void {
 let environment: IEnvironment;
 
 beforeEach(() => {
-  environment = {};
+  environment = {
+    computeSatisfaction: () => 1,
+  };
 });
 
 describe('Planning state', () => {

@@ -13,7 +13,9 @@ let environment: IEnvironment;
 beforeEach(() => {
   pState = new PlanningState([]);
   eis = new EnvironmentInspection(pState);
-  environment = {};
+  environment = {
+    computeSatisfaction: () => 1,
+  };
 });
 
 describe('EIS', () => {

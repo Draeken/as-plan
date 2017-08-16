@@ -93,12 +93,15 @@ describe('builder', () => {
       goal: { kind: GoalKind.Continuous, quantity: 2, perTime: 10 },
     }];
     builder.build(queries).subscribe((agents: IPlanAgent[]) => {
-      expect(agents).toHaveLength(2);
-      const a1Duration = agents[0].end - agents[0].start;
-      const a2Duration = agents[1].end - agents[1].start;
-      expect(a1Duration).toBeCloseTo(8);
-      expect(a2Duration).toBeCloseTo(2);
-      done();
+        // Using try to avoid timeout: https://github.com/facebook/jest/issues/1873
+      try {
+        expect(agents).toHaveLength(2);
+        const a1Duration = agents[0].end - agents[0].start;
+        const a2Duration = agents[1].end - agents[1].start;
+        expect(a1Duration).toBeCloseTo(8);
+        expect(a2Duration).toBeCloseTo(2);
+        done();
+      } catch (e) { done.fail(e); }
     });
   });
 

@@ -22,8 +22,7 @@ export default class Builder {
     const planningState = new PlanningState([]);
     const eis = new EnvironmentInspection(planningState);
     new Coordinator(planningState, eis);
-    queries.map(query =>
-        new EnvironmentManager(this.eConfig, query, planningState));
+    queries.map(query => new EnvironmentManager(this.eConfig, query, planningState));
     return planningState.finalPlanAgents;
   }
 }

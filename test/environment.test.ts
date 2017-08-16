@@ -12,7 +12,9 @@ let environment: IEnvironment;
 
 beforeEach(() => {
   pState = new PlanningState([]);
-  environment = {};
+  environment = {
+    computeSatisfaction: () => 1,
+  };
 });
 
 describe('environment', () => {

@@ -48,6 +48,11 @@ export class Environment implements IEnvironment {
     return this.zones.map(z => z.name);
   }
 
+  computeSatisfaction(planName: string): number {
+    console.log('satisfaction ', planName);
+    return 1;
+  }
+
   private nameZone(start: number, end: number): string {
     return `${this.init.name}#${start}#${end}`;
   }
