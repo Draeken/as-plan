@@ -1,3 +1,5 @@
+import { Plan } from '../planning/plan.interface';
+
 export interface IEnvironment {
-  computeSatisfaction(planName: string): number;
+  computeSatisfaction(plan: Plan): number;
 }

@@ -30,7 +30,7 @@ export default class PlanningState {
         return a.every((agentA) => {
           const agentB = b.find(agent => agent.name === agentA.name);
           if (!agentB) { return false; }
-          return Math.abs(agentA.getSatisfaction() - agentB.getSatisfaction()) < 0.1;
+          return Math.abs(agentA.getSatisfaction() - agentB.getSatisfaction()) < 0.01;
         });
       }).map(([_, b]) => b);
     this.planAgentsComplete.subscribe(

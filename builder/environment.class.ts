@@ -14,7 +14,7 @@ interface Zone {
 export class Environment implements IEnvironment {
   private zones: Zone[] = [];
 
-  constructor(private init: Plan, query: Query, private pState: PlanningState) {
+  constructor(private init: Plan, private query: Query, private pState: PlanningState) {
     if (query.timeRestrictions && query.timeRestrictions.hour) {
       const restrictions = query.timeRestrictions.hour;
       if (restrictions.condition === RestrictionCondition.InRange) {
@@ -48,9 +48,11 @@ export class Environment implements IEnvironment {
     return this.zones.map(z => z.name);
   }
 
-  computeSatisfaction(planName: string): number {
-    console.log('satisfaction ', planName);
-    return 1;
+  computeSatisfaction(plan: Plan): number {
+    console.log('satisfaction ', plan);
+    const duration = plan.end - plan.start;
+    const goalDuration = this.query.goal ? this.query.goal.quantity : duration;
+    return duration / goalDuration;
   }
 
   private nameZone(start: number, end: number): string {

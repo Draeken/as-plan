@@ -80,7 +80,7 @@ describe('builder', () => {
     });
   });
 
-  it('should give priority to satisfy continuous goal planAgent', (done) => {
+  it.only('should give priority to satisfy continuous goal planAgent', (done) => {
     expect.assertions(3);
     builder.eConfig = { minTime: 0, maxTime: 10 };
     const queries: Query[] = [{
