@@ -3,7 +3,7 @@ import {  } from 'jest';
 import Builder from '../builder/Builder';
 import { Query } from '../queries/query.interface';
 import { QueryKind, GoalKind, RestrictionCondition } from '../queries/query.enum';
-import { Plan } from '../planning/plan.interface';
+import { Chunk } from '../timeline/chunk.interface';
 
 let builder: Builder;
 
@@ -19,7 +19,7 @@ describe('builder', () => {
   it('should return an observable of planning', (done) => {
     expect.assertions(1);
     const queries: Query[] = [];
-    builder.build(queries).subscribe((planning: Plan[]) => {
+    builder.build(queries).subscribe((planning: Chunk[]) => {
       expect(Array.isArray(planning)).toBeTruthy();
       done();
     });
@@ -33,13 +33,14 @@ describe('builder', () => {
       end: { target: 2 },
       kind: QueryKind.Atomic,
     }];
-    builder.build(queries).subscribe((planning: Plan[]) => {
+    builder.build(queries).subscribe((planning: Chunk[]) => {
       expect(planning).toHaveLength(1);
       const plan = planning[0];
-      expect(plan.children).toHaveLength(0);
+      expect(plan.task).toBeTruthy();
+      expect(plan.task ? plan.task.children : []).toHaveLength(0);
       expect(plan.start).toBe(0);
       expect(plan.end).toBe(2);
-      expect(plan.name).toBe('test');
+      expect(plan.task ? plan.task.name : false).toBe('test');
       done();
     });
   });
@@ -93,8 +94,8 @@ describe('builder', () => {
       duration: { min: 0.01 },
       kind: QueryKind.Placeholder,
     }];
-    builder.build(queries).subscribe((planning: Plan[]) => {
-      expect(planning).toHaveLength(11);      
+    builder.build(queries).subscribe((planning: Chunk[]) => {
+      expect(planning).toHaveLength(11);
       done();
     });
   });
