@@ -6,13 +6,13 @@ import 'rxjs/add/operator/scan';
 import { Chunk } from './chunk.interface';
 
 import {
-  TimelineAction,
+  PipelineAction,
   InitTimeline,
   UpdateTimeline,
 } from './actions';
 
-export default class Timeline {
-  readonly actions = new Subject<TimelineAction>();
+export class Timeline {
+  readonly actions = new Subject<PipelineAction>();
 
   private stateFn: Observable<Chunk[]>;
 
@@ -28,7 +28,7 @@ export default class Timeline {
 
   private timelineHandler(initState: Chunk[]): Observable<Chunk[]> {
     return <Observable<Chunk[]>>this.actions
-      .scan((state: Chunk[], action: TimelineAction) => {
+      .scan((state: Chunk[], action: PipelineAction) => {
         if (action instanceof InitTimeline) {
           return this.handleInit(state, action);
         } else if (action instanceof UpdateTimeline) {
@@ -38,11 +38,11 @@ export default class Timeline {
       },    initState);
   }
 
-  private handleInit(state: Chunk[], action: TimelineAction): Chunk[] {
+  private handleInit(state: Chunk[], action: PipelineAction): Chunk[] {
     return state;
   }
 
-  private handleUpdate(state: Chunk[], action: TimelineAction): Chunk[] {
+  private handleUpdate(state: Chunk[], action: PipelineAction): Chunk[] {
     return state;
   }
 

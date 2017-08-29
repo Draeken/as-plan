@@ -49,7 +49,7 @@ describe('builder', () => {
     expect.assertions(1);
     const queries: Query[] = [{
       name: 'sleep',
-      goal: { kind: GoalKind.Discrete, quantity: 1, minutes: 24 },
+      goal: { kind: GoalKind.Atomic, quantity: 1, minutes: 24 },
       duration: { min: 1.5, target: 9 },
       timeRestrictions: {
         hour: { condition: RestrictionCondition.OutRange, ranges: [[10, 20]] },
@@ -57,7 +57,7 @@ describe('builder', () => {
       kind: QueryKind.Placeholder,
     }, {
       name: 'work',
-      goal: { kind: GoalKind.Discrete, quantity: 1, minutes: 24 },
+      goal: { kind: GoalKind.Atomic, quantity: 1, minutes: 24 },
       duration: { target: 10 },
       timeRestrictions: {
         hour: {
@@ -72,7 +72,7 @@ describe('builder', () => {
       kind: QueryKind.Placeholder,
     }, {
       name: 'diner',
-      goal: { kind: GoalKind.Discrete, quantity: 1, minutes: 24 },
+      goal: { kind: GoalKind.Atomic, quantity: 1, minutes: 24 },
       duration: { target: 0.5 },
       timeRestrictions: {
         hour: { condition: RestrictionCondition.InRange, ranges: [[18, 23]] },
@@ -80,7 +80,7 @@ describe('builder', () => {
       kind: QueryKind.Placeholder,
     }, {
       name: 'side project',
-      goal: { kind: GoalKind.Continuous, quantity: 2, minutes: 48, maximize: true },
+      goal: { kind: GoalKind.Splittable, quantity: 2, minutes: 48, maximize: true },
       timeRestrictions: {
         hour: {
           condition: RestrictionCondition.OutRange, ranges: [[0, 5]],
@@ -90,7 +90,7 @@ describe('builder', () => {
       kind: QueryKind.Placeholder,
     }, {
       name: 'reading',
-      goal: { kind: GoalKind.Continuous, quantity: 0.5, minutes: 24 },
+      goal: { kind: GoalKind.Splittable, quantity: 0.5, minutes: 24 },
       duration: { min: 0.01 },
       kind: QueryKind.Placeholder,
     }];

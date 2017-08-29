@@ -4,8 +4,8 @@ export enum QueryKind {
 }
 
 export enum GoalKind {
-  Discrete,
-  Continuous,
+  Atomic,
+  Splittable,
 }
 
 export enum RestrictionCondition {

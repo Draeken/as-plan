@@ -4,8 +4,7 @@ export interface Goal {
   kind: GoalKind;
   quantity: number;
   minutes: number;
-  maximize?: boolean;
-  timeBetween?: TimeBoundary;
+  // timeBetween?: TimeBoundary;
 }
 
 export interface TimeBoundary {
