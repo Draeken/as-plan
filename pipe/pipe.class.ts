@@ -23,7 +23,6 @@ interface Subpipe {
 interface TimeMask {
   start: number;
   end: number;
-  children: TimeMask[];
 }
 
 type maskFn = (tm: TimeMask) => TimeMask[];
@@ -48,12 +47,13 @@ export class Pipe implements IPipe {
   private buildRestrictionMask(query: Query): void {
     const tr = query.timeRestrictions;
     if (!tr) { return; }
-    const mask: TimeMask = {
+    let masks: TimeMask[] = [{
       start: this.config.startMin,
-      end: this.config.endMax,
-      children: [] };
+      end: this.config.endMax }];
     if (tr.month) {
-      this.applyMaskFn(mask, this.getMaskFilterFn(tr.month, this.mapMonthRange));
+      masks = masks
+      .map(this.getMaskFilterFn(tr.month, this.mapMonthRange))
+      .reduce((a, b) => a.concat(b));
     }
   }
 
@@ -99,7 +99,7 @@ export class Pipe implements IPipe {
       if (tr.condition === RestrictionCondition.InRange) {
         ranges.forEach((range) => {
           const [start, end] = range;
-          result.push({ start, end, children: [] });
+          result.push({ start, end });
         });
       }
       return result;
@@ -118,23 +118,6 @@ export class Pipe implements IPipe {
     end = mask.end;
     if (end > start) { newRange.push([start, end]); }
     return newRange;
-  }
-
-  private applyMaskFn(timeMask: TimeMask, fn: maskFn): void {
-    const applyLevel = this.timeMaskDeep(timeMask);
-    const masksFromLevel = this.getMaskLevel(timeMask, 0, applyLevel);
-    masksFromLevel.forEach(mask => mask.children = fn(mask));
-  }
-
-  private timeMaskDeep(timeMask: TimeMask): number {
-    return 1 + timeMask.children.map(this.timeMaskDeep).reduce((a, b) => a > b ? a : b, 0);
-  }
-
-  private getMaskLevel(timeMask: TimeMask, curLevel: number, tarLevel: number): TimeMask[] {
-    if (curLevel === tarLevel) { return [timeMask]; }
-    return timeMask.children
-      .map(mask => this.getMaskLevel(mask, curLevel + 1, tarLevel))
-      .reduce((a, b) => a.concat(b), []);
   }
 
   private buildSubpipes(query: Query, pipeline: Pipeline): void {
