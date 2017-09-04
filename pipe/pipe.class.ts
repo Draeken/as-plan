@@ -30,9 +30,10 @@ type mapRange = (r: [number, number][], tm: TimeMask) => [number, number][];
 
 export class Pipe implements IPipe {
   private pipes: Subpipe[] = [];
+  private restrictionMask: TimeMask[];
 
   constructor(query: Query, pipeline: Pipeline, private config: PipeConfig) {
-    this.buildRestrictionMask(query);
+    this.restrictionMask = this.buildRestrictionMask(query);
     this.buildSubpipes(query, pipeline);
   }
 
@@ -44,9 +45,9 @@ export class Pipe implements IPipe {
 
   }
 
-  private buildRestrictionMask(query: Query): void {
+  private buildRestrictionMask(query: Query): TimeMask[] {
     const tr = query.timeRestrictions;
-    if (!tr) { return; }
+    if (!tr) { return []; }
     let masks: TimeMask[] = [{
       start: this.config.startMin,
       end: this.config.endMax }];
@@ -55,6 +56,83 @@ export class Pipe implements IPipe {
       .map(this.getMaskFilterFn(tr.month, this.mapMonthRange))
       .reduce((a, b) => a.concat(b));
     }
+    if (tr.weekday) {
+      masks = masks
+      .map(this.getMaskFilterFn(tr.weekday, this.mapWeekdayRange))
+      .reduce((a, b) => a.concat(b));
+    }
+    if (tr.hour) {
+      masks = masks
+      .map(this.getMaskFilterFn(tr.hour, this.mapHourRange))
+      .reduce((a, b) => a.concat(b));
+    }
+    return masks;
+  }
+
+  private mapHourRange(ranges: [number, number][], timeMask: TimeMask): [number, number][] {
+    return ranges.map((range) => {
+      const end = new Date(timeMask.end).setHours(23, 59, 59, 999);
+      const currentRange = this.getFirstHourRange(range, timeMask);
+      const result: [number, number][] = [];
+      result.push([currentRange[0], currentRange[1]]);
+      while (currentRange[0] < end) {
+        currentRange[0] += 24 * 3600 * 1000;
+        currentRange[1] += 24 * 3600 * 1000;
+        result.push([currentRange[0], currentRange[1]]);
+      }
+      return result;
+    }).reduce((a, b) => a.concat(b));
+  }
+
+  private getFirstHourRange(range: [number, number], timeMask: TimeMask): [number, number] {
+    const startDate = new Date(timeMask.start);
+    startDate.setHours(0, 0, 0, 0);
+    let date = +startDate - 24 * 3600 * 1000;
+    let hour = startDate.getHours();
+    const getNextHour = (target: number) => {
+      while (hour !== target) {
+        hour += (hour + 1) % 24;
+        date += 3600 * 1000;
+      }
+    };
+    getNextHour(range[0]);
+    const start = date + (range[0] % 1) * 3600 * 1000;
+    getNextHour(range[1]);
+    const end = date + (range[1] % 1) * 3600 * 1000;
+    return [start, end];
+  }
+
+  private mapWeekdayRange(ranges: [number, number][], timeMask: TimeMask): [number, number][] {
+    return ranges.map((range) => {
+      const end = new Date(timeMask.end).setHours(23, 59, 59, 999);
+      const currentRange = this.getFirstWeekdayRange(range, timeMask);
+      const result: [number, number][] = [];
+      result.push([currentRange[0], currentRange[1]]);
+      while (currentRange[0] < end) {
+        currentRange[0] += 7 * 24 * 3600 * 1000;
+        currentRange[1] += 7 * 24 * 3600 * 1000;
+        result.push([currentRange[0], currentRange[1]]);
+      }
+      return result;
+    }).reduce((a, b) => a.concat(b));
+  }
+
+  private getFirstWeekdayRange(range: [number, number], timeMask: TimeMask): [number, number] {
+    const startDate = new Date(timeMask.start);
+    startDate.setHours(0, 0, 0, 0);
+    let date = +startDate - 7 * 24 * 3600 * 1000;
+    let day = startDate.getDay();
+    const getNextDay = (target: number) => {
+      while (day !== target) {
+        day += (day + 1) % 7;
+        date += 24 * 3600 * 1000;
+      }
+    };
+    getNextDay(range[0]);
+    const start = date + (range[0] % 1) * 24 * 3600 * 1000;
+    getNextDay(range[1]);
+    const end = date + (range[1] % 1) * 24 * 3600 * 1000;
+    return [start, end];
   }
 
   private mapMonthRange(ranges: [number, number][], timeMask: TimeMask): [number, number][] {
