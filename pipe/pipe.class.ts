@@ -1,9 +1,8 @@
-import { BehaviorSubject } from 'rxjs/BehaviorSubject';
-
 import { Query, TimeRestriction } from '../queries/query.interface';
 import { GoalKind, RestrictionCondition } from '../queries/query.enum';
 import { Pipeline } from '../timeline/pipes.state';
-import { AddPotentiality } from '../timeline/actions';
+import { AddPotentialities } from '../timeline/actions';
+import { Potentiality } from '../timeline/potentiality.interface';
 import { IPipe } from './pipe.interface';
 
 export interface PipeConfig {
@@ -13,11 +12,8 @@ export interface PipeConfig {
 
 interface Subpipe {
   name: string;
-  children: {
-    start: number;
-    end: number;
-  }[];
-  placed: boolean;
+  children: TimeMask[];
+  duration: number;
 }
 
 interface TimeMask {
@@ -26,26 +22,24 @@ interface TimeMask {
 }
 
 type maskFn = (tm: TimeMask) => TimeMask[];
-type mapRange = (r: [number, number][], tm: TimeMask) => [number, number][];
+type mapRange = (r: TimeMask[], tm: TimeMask) => TimeMask[];
 
 export class Pipe implements IPipe {
   private pipes: Subpipe[] = [];
-  private restrictionMask: TimeMask[];
 
   constructor(query: Query, pipeline: Pipeline, private config: PipeConfig) {
-    this.restrictionMask = this.buildRestrictionMask(query);
     this.buildSubpipes(query, pipeline);
   }
 
   isEligible() {
-    return this.pipes.some(p => !p.placed);
+    return this.pipes.some(p => Number.isFinite(p.duration));
   }
 
   place() {
 
   }
 
-  private buildRestrictionMask(query: Query): TimeMask[] {
+  private buildPermissionMask(query: Query): TimeMask[] {
     const tr = query.timeRestrictions;
     if (!tr) { return []; }
     let masks: TimeMask[] = [{
@@ -69,22 +63,22 @@ export class Pipe implements IPipe {
     return masks;
   }
 
-  private mapHourRange(ranges: [number, number][], timeMask: TimeMask): [number, number][] {
+  private mapHourRange(ranges: TimeMask[], timeMask: TimeMask): TimeMask[] {
     return ranges.map((range) => {
       const end = new Date(timeMask.end).setHours(23, 59, 59, 999);
       const currentRange = this.getFirstHourRange(range, timeMask);
-      const result: [number, number][] = [];
-      result.push([currentRange[0], currentRange[1]]);
-      while (currentRange[0] < end) {
-        currentRange[0] += 24 * 3600 * 1000;
-        currentRange[1] += 24 * 3600 * 1000;
-        result.push([currentRange[0], currentRange[1]]);
+      const result: TimeMask[] = [];
+      result.push({ ...currentRange });
+      while (currentRange.start < end) {
+        currentRange.start += 24 * 3600 * 1000;
+        currentRange.end += 24 * 3600 * 1000;
+        result.push({ ...currentRange });
       }
       return result;
     }).reduce((a, b) => a.concat(b));
   }
 
-  private getFirstHourRange(range: [number, number], timeMask: TimeMask): [number, number] {
+  private getFirstHourRange(range: TimeMask, timeMask: TimeMask): TimeMask {
     const startDate = new Date(timeMask.start);
     startDate.setHours(0, 0, 0, 0);
     let date = +startDate - 24 * 3600 * 1000;
@@ -95,29 +89,29 @@ export class Pipe implements IPipe {
         date += 3600 * 1000;
       }
     };
-    getNextHour(range[0]);
-    const start = date + (range[0] % 1) * 3600 * 1000;
-    getNextHour(range[1]);
-    const end = date + (range[1] % 1) * 3600 * 1000;
-    return [start, end];
+    getNextHour(range.start);
+    const start = date + (range.start % 1) * 3600 * 1000;
+    getNextHour(range.end);
+    const end = date + (range.end % 1) * 3600 * 1000;
+    return { start, end };
   }
 
-  private mapWeekdayRange(ranges: [number, number][], timeMask: TimeMask): [number, number][] {
+  private mapWeekdayRange(ranges: TimeMask[], timeMask: TimeMask): TimeMask[] {
     return ranges.map((range) => {
       const end = new Date(timeMask.end).setHours(23, 59, 59, 999);
       const currentRange = this.getFirstWeekdayRange(range, timeMask);
-      const result: [number, number][] = [];
-      result.push([currentRange[0], currentRange[1]]);
-      while (currentRange[0] < end) {
-        currentRange[0] += 7 * 24 * 3600 * 1000;
-        currentRange[1] += 7 * 24 * 3600 * 1000;
-        result.push([currentRange[0], currentRange[1]]);
+      const result: TimeMask[] = [];
+      result.push({ ...currentRange });
+      while (currentRange.start < end) {
+        currentRange.start += 7 * 24 * 3600 * 1000;
+        currentRange.end += 7 * 24 * 3600 * 1000;
+        result.push({ ...currentRange });
       }
       return result;
     }).reduce((a, b) => a.concat(b));
   }
 
-  private getFirstWeekdayRange(range: [number, number], timeMask: TimeMask): [number, number] {
+  private getFirstWeekdayRange(range: TimeMask, timeMask: TimeMask): TimeMask {
     const startDate = new Date(timeMask.start);
     startDate.setHours(0, 0, 0, 0);
     let date = +startDate - 7 * 24 * 3600 * 1000;
@@ -128,14 +122,14 @@ export class Pipe implements IPipe {
         date += 24 * 3600 * 1000;
       }
     };
-    getNextDay(range[0]);
-    const start = date + (range[0] % 1) * 24 * 3600 * 1000;
-    getNextDay(range[1]);
-    const end = date + (range[1] % 1) * 24 * 3600 * 1000;
-    return [start, end];
+    getNextDay(range.start);
+    const start = date + (range.start % 1) * 24 * 3600 * 1000;
+    getNextDay(range.end);
+    const end = date + (range.end % 1) * 24 * 3600 * 1000;
+    return { start, end };
   }
 
-  private mapMonthRange(ranges: [number, number][], timeMask: TimeMask): [number, number][] {
+  private mapMonthRange(ranges: TimeMask[], timeMask: TimeMask): TimeMask[] {
     const startYear = new Date(timeMask.start).getFullYear();
     const endYear = new Date(timeMask.end).getFullYear();
     if (startYear === endYear) {
@@ -146,13 +140,13 @@ export class Pipe implements IPipe {
       .concat(ranges.map(r => this.mapRangeToMonthWithYear(endYear, r)));
   }
 
-  private mapRangeToMonthWithYear(year: number, range: [number, number]): [number, number] {
-    const start = new Date(year, range[0]);
-    const end = new Date(year, range[1]);
-    return <[number, number]>[
-      start.setDate((range[0] % 1) * this.daysInMonth(start)),
-      end.setDate((range[1] % 1) * this.daysInMonth(end)),
-    ];
+  private mapRangeToMonthWithYear(year: number, range: TimeMask): TimeMask {
+    const start = new Date(year, range.start);
+    const end = new Date(year, range.end);
+    return {
+      start: start.setDate((range.start % 1) * this.daysInMonth(start)),
+      end: end.setDate((range.end % 1) * this.daysInMonth(end)),
+    };
   }
 
   private daysInMonth(date: Date) {
@@ -161,53 +155,71 @@ export class Pipe implements IPipe {
 
   private getMaskFilterFn(tr: TimeRestriction, mapFn: mapRange): maskFn {
     return (timeMask: TimeMask) => {
-      let ranges = mapFn(tr.ranges, timeMask)
-        .filter(r => r[0] < timeMask.end && r[1] > timeMask.start)
-        .sort((a, b) => a[0] - b[0])
-        .map(range => <[number, number]>[
-          Math.max(timeMask.start, range[0]),
-          Math.min(timeMask.end, range[1])]);
+      let ranges = this.maskRangeUnion(
+        mapFn(tr.ranges.map(r => ({ start: r[0], end: r[1] })), timeMask),
+        timeMask);
+
       if (tr.condition === RestrictionCondition.OutRange) {
         ranges = this.convertOutboundToInbound(timeMask, ranges);
       }
-      if (ranges.length === 0) {
-        return [];
-      }
-      const result: TimeMask[] = [];
-      if (tr.condition === RestrictionCondition.InRange) {
-        ranges.forEach((range) => {
-          const [start, end] = range;
-          result.push({ start, end });
-        });
-      }
-      return result;
+      return ranges;
     };
   }
 
-  private convertOutboundToInbound(mask: TimeMask, ranges: [number, number][]): [number, number][] {
+  private maskRangeUnion(ranges: TimeMask[], mask: TimeMask): TimeMask[] {
+    return ranges
+      .filter(r => r.start < mask.end && r.end > mask.start)
+      .sort((a, b) => a.start - b.start)
+      .map(range => ({
+        start: Math.max(mask.start, range.start),
+        end: Math.min(mask.end, range.end),
+      }));
+  }
+
+  private convertOutboundToInbound(mask: TimeMask, ranges: TimeMask[]): TimeMask[] {
     let start = mask.start;
     let end;
-    const newRange: [number, number][] = [];
+    const newRange: TimeMask[] = [];
     ranges.forEach((range) => {
-      end = range[0];
-      if (end > start) { newRange.push([start, end]); }
-      start = range[1];
+      end = range.start;
+      if (end > start) { newRange.push({ start, end }); }
+      start = range.end;
     });
     end = mask.end;
-    if (end > start) { newRange.push([start, end]); }
+    if (end > start) { newRange.push({ start, end }); }
     return newRange;
   }
 
   private buildSubpipes(query: Query, pipeline: Pipeline): void {
-    if (this.handleGoal(query, pipeline)) { return; }
-    if (this.handleAtomic(query, pipeline)) { return; }
+    const subPipes: Subpipe[] = [];
+    subPipes.concat(this.handleGoal(query), this.handleAtomic(query));
+    const permissionMask = this.buildPermissionMask(query);
+    subPipes.forEach(s => s.children = this.maskRangeUnion(permissionMask, s.children[0]));
+    pipeline.actions.next(new AddPotentialities(subPipes
+      .map(this.subPipeToPotentiality)
+      .reduce((a, b) => a.concat(b))));
   }
 
-  private handleGoal(query: Query, pipeline: Pipeline): boolean {
-    if (!query.goal) { return false; }
-    const timeloop = query.goal.minutes;
+  private subPipeToPotentiality(subpipe: Subpipe): Potentiality[] {
+    console.log('this must be Pipe', this);
+    const availableSpace = subpipe.children.map(s => s.end - s.start).reduce((a, b) => a + b);
+    return subpipe.children.map(child => ({
+      start: child.start,
+      end: child.end,
+      name: subpipe.name,
+      pipe: this,
+      potentiel: subpipe.duration / availableSpace,
+    }));
+  }
+
+  private handleGoal(query: Query): Subpipe[] {
+    if (!query.goal) { return []; }
+    let timeloop = query.goal.time;
     let start = this.config.startMin;
+    let duration = 0;
     if (query.goal.kind === GoalKind.Atomic) {
+      timeloop /= query.goal.quantity;
+      duration = query.duration ? query.duration.target || 0 : 0;
       const timeRest = query.timeRestrictions;
       if (timeRest && timeRest.hour && timeRest.hour.ranges.length > 1) {
         const startRange = timeRest.hour.ranges.find(r => r[0] < 0.1);
@@ -216,35 +228,50 @@ export class Pipe implements IPipe {
           start = endRange[0];
         }
       }
+    } else {
+      duration = query.goal.quantity;
     }
     const offsetEffect = start === this.config.startMin ? 0 : -1;
     const maxDuration = this.config.endMax - this.config.startMin;
     const subpipeCount = Math.floor(maxDuration / timeloop) + offsetEffect;
-    const subpipes = [];
+    const pipesChildren: TimeMask[] = [];
     for (let i = 0; i < subpipeCount; i += 1) {
-      subpipes.push([start + timeloop * i, start - 1 + timeloop * (i + 1)]);
+      pipesChildren.push({
+        start: start + timeloop * i,
+        end:  start - 1 + timeloop * (i + 1),
+      });
     }
+    return pipesChildren.map((mask, i) => ({
+      duration,
+      children: [mask],
+      name: `${query.name}-goal-${i}`,
+    }));
   }
 
-  private handleAtomic(query: Query, pipeline: Pipeline): boolean {
-    if (!((query.duration && (query.start || query.end)) || (query.start && query.end))) {
-      return false;
+  private handleAtomic(query: Query): Subpipe[] {
+    if (!(query.duration || (query.start && query.end))) {
+      return [];
     }
-    const start = query.start ? query.start.target || 0 : 0;
-    const end = query.end ?
-      query.end.target || start : query.duration ? (query.duration.target || 0) + start : start;
-    this.pipes.push({
-      name: 'atomic',
-      placed: false,
-      children: [{ start, end }],
-    });
-    pipeline.actions.next(new AddPotentiality({
-      start,
-      end,
-      name: 'atomic',
-      pipe: this,
-    }));
-    return true;
+    const children: TimeMask[] = [];
+    let duration = 0;
+    if (query.start && query.end) {
+      children.push({
+        start: query.start.target || 0,
+        end: query.end.target || 0,
+      });
+      duration = children[0].end - children[0].start;
+    } else {
+      children.push({
+        start: this.config.startMin,
+        end: this.config.endMax,
+      });
+      duration = query.duration ? query.duration.target || 0 : 0;
+    }
+    return [{
+      duration,
+      children,
+      name: `${query.name}-atomic`,
+    }];
   }
 
 }

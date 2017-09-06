@@ -5,4 +5,5 @@ export interface Potentiality {
   end: number;
   pipe: IPipe;
   name: string;
+  potentiel: number;
 }

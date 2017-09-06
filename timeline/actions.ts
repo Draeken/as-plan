@@ -1,8 +1,8 @@
 import { IPipe } from '../pipe/pipe.interface';
 import { Potentiality } from './potentiality.interface';
 
-export class AddPotentiality {
-  constructor(public potentiality: Potentiality) {}
+export class AddPotentialities {
+  constructor(public potentialities: Potentiality[]) {}
 }
 
 export class InitTimeline {
@@ -15,4 +15,4 @@ export class UpdateTimeline {
   ) {}
 }
 
-export type PipelineAction = AddPotentiality | UpdateTimeline | InitTimeline;
+export type PipelineAction = AddPotentialities | UpdateTimeline | InitTimeline;
