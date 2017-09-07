@@ -1,13 +1,13 @@
 import { Query, TimeRestriction } from '../queries/query.interface';
 import { GoalKind, RestrictionCondition } from '../queries/query.enum';
 import { Pipeline } from '../timeline/pipes.state';
-import { AddPotentialities } from '../timeline/actions';
+import { AddPotentialities, Materialize } from '../timeline/actions';
 import { Potentiality } from '../timeline/potentiality.interface';
+import { PressureChunk } from '../timeline/environment.class';
 import { IPipe } from './pipe.interface';
+import { BoundConfig } from '../builder/Builder';
 
-export interface PipeConfig {
-  startMin: number;
-  endMax: number;
+export interface PipeConfig extends BoundConfig {
 }
 
 interface Subpipe {
@@ -26,21 +26,92 @@ type mapRange = (r: TimeMask[], tm: TimeMask) => TimeMask[];
 
 export class Pipe implements IPipe {
   private pipes: Subpipe[] = [];
+  private isSplittable: boolean;
 
-  constructor(query: Query, pipeline: Pipeline, private config: PipeConfig) {
-    this.buildSubpipes(query, pipeline);
+  constructor(private query: Query, private pipeline: Pipeline, private config: PipeConfig) {
+    this.isSplittable = query.goal ? query.goal.kind === GoalKind.Splittable : false;
+    this.buildSubpipes();
   }
 
   isEligible() {
     return this.pipes.some(p => Number.isFinite(p.duration));
   }
 
-  place() {
-
+  place(name: string, env: PressureChunk[]) {
+    const pipe = this.pipes.find(p => p.name === name);
+    if (!pipe) { console.warn(`Pipe ${name} not found.`); return; }
+    let result: PressureChunk[] = [];
+    const chunks = env
+      .filter(chunk => pipe.children.some(p => p.start <= chunk.start && chunk.end <= p.end))
+      .sort((c1, c2) => c2.pressure - c1.pressure);
+    if (this.isSplittable) {
+      result = this.handleSplittablePlacement(chunks, pipe.duration);
+    } else {
+      result = this.handleAtomicPlacement(chunks, pipe);
+    }
+    this.pipeline.actions.next(new Materialize(name, result.map(r => ({
+      name,
+      start: r.start,
+      end: r.end,
+      potentiel: Infinity,
+      pipe: this,
+    }))));
   }
 
-  private buildPermissionMask(query: Query): TimeMask[] {
-    const tr = query.timeRestrictions;
+  private handleAtomicPlacement(chunks: PressureChunk[], pipe: Subpipe): PressureChunk[] {
+    let bestPlace: PressureChunk = { start: 0, end: 0, pressure: Infinity };
+    const whichBetter = (c: PressureChunk, b: PressureChunk) => {
+      if (!pipe.children.some(p => p.start <= c.start && c.end <= p.end)) { return b; }
+      return c.pressure < b.pressure ? c : b;
+    };
+    chunks.forEach((chunk) => {
+      this.getAtomicPressureChunk(chunks, chunk, pipe.duration)
+        .forEach((challenger) => {
+          bestPlace = whichBetter(challenger, bestPlace);
+        });
+    });
+    return[bestPlace];
+  }
+
+  private handleSplittablePlacement(chunks: PressureChunk[], duration: number): PressureChunk[] {
+    let materializedSpace = 0;
+    const result = [];
+    while (materializedSpace < duration && chunks.length > 0) {
+      const best = <PressureChunk>chunks.pop();
+      const bestDur = best.end - best.start;
+      if (bestDur > duration) {
+        best.end = best.start + duration;
+      }
+      materializedSpace += bestDur;
+      result.push(best);
+    }
+    return result;
+  }
+
+  private getAtomicPressureChunk(
+    chunks: PressureChunk[],
+    chunk: PressureChunk,
+    duration: number,
+  ): PressureChunk[] {
+    const getPressureChunk = (start: number, end: number) => {
+      const pressure = chunks
+        .map((c) => {
+          if (!(c.start < end && c.end > start)) { return 0; }
+          const cDur = c.end - c.start;
+          const actDur = Math.min(cDur, Math.min(c.end, end) - Math.max(c.start, start));
+          return actDur * c.pressure / cDur;
+        })
+        .reduce((a, b) => a + b);
+      return { start, end, pressure };
+    };
+    return [
+      getPressureChunk(chunk.start, chunk.start + duration),
+      getPressureChunk(chunk.end - duration, chunk.end),
+    ];
+  }
+
+  private buildPermissionMask(): TimeMask[] {
+    const tr = this.query.timeRestrictions;
     if (!tr) { return []; }
     let masks: TimeMask[] = [{
       start: this.config.startMin,
@@ -190,12 +261,12 @@ export class Pipe implements IPipe {
     return newRange;
   }
 
-  private buildSubpipes(query: Query, pipeline: Pipeline): void {
+  private buildSubpipes(): void {
     const subPipes: Subpipe[] = [];
-    subPipes.concat(this.handleGoal(query), this.handleAtomic(query));
-    const permissionMask = this.buildPermissionMask(query);
+    subPipes.concat(this.handleGoal(), this.handleAtomic());
+    const permissionMask = this.buildPermissionMask();
     subPipes.forEach(s => s.children = this.maskRangeUnion(permissionMask, s.children[0]));
-    pipeline.actions.next(new AddPotentialities(subPipes
+    this.pipeline.actions.next(new AddPotentialities(subPipes
       .map(this.subPipeToPotentiality)
       .reduce((a, b) => a.concat(b))));
   }
@@ -212,12 +283,13 @@ export class Pipe implements IPipe {
     }));
   }
 
-  private handleGoal(query: Query): Subpipe[] {
+  private handleGoal(): Subpipe[] {
+    const query = this.query;
     if (!query.goal) { return []; }
     let timeloop = query.goal.time;
     let start = this.config.startMin;
     let duration = 0;
-    if (query.goal.kind === GoalKind.Atomic) {
+    if (!this.isSplittable) {
       timeloop /= query.goal.quantity;
       duration = query.duration ? query.duration.target || 0 : 0;
       const timeRest = query.timeRestrictions;
@@ -248,7 +320,8 @@ export class Pipe implements IPipe {
     }));
   }
 
-  private handleAtomic(query: Query): Subpipe[] {
+  private handleAtomic(): Subpipe[] {
+    const query = this.query;
     if (!(query.duration || (query.start && query.end))) {
       return [];
     }

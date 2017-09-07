@@ -6,14 +6,15 @@ import 'rxjs/add/operator/scan';
 import { Potentiality } from './potentiality.interface';
 import {
   PipelineAction,
+  AddPotentialities,
   InitTimeline,
   UpdateTimeline,
+  Materialize,
 } from './actions';
 
 export class Pipeline {
   readonly actions = new Subject<PipelineAction>();
-
-  private stateFn: Observable<Potentiality[]>;
+  readonly stateFn: Observable<Potentiality[]>;
 
   constructor(initialPipeline: Potentiality[]) {
     this.stateFn = this.wrapIntoBehavior(initialPipeline, this.pipelineHandler(initialPipeline));
@@ -30,11 +31,33 @@ export class Pipeline {
       .scan((state: Potentiality[], action: PipelineAction) => {
         if (action instanceof InitTimeline) {
           return this.handleInit(state, action);
+        } else if (action instanceof AddPotentialities) {
+          return this.handleAddPotentialities(state, action);
+        } else if (action instanceof Materialize) {
+          return this.handleMaterialize(state, action);
         } else if (action instanceof UpdateTimeline) {
           return this.handleUpdate(state, action);
         }
         return state;
       },    initState);
+  }
+
+  private handleAddPotentialities(
+    state: Potentiality[],
+    action: AddPotentialities,
+  ): Potentiality[] {
+    const result = [...state, ...action.potentialities];
+    result.sort((a, b) => a.start - b.start);
+    return result;
+  }
+
+  private handleMaterialize(
+    state: Potentiality[],
+    action: Materialize,
+  ): Potentiality[] {
+    const result = state.filter(p => p.name !== action.name).concat(action.potentialities);
+    result.sort((a, b) => a.start - b.start);
+    return result;
   }
 
   private handleInit(state: Potentiality[], action: PipelineAction): Potentiality[] {

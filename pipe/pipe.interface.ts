@@ -1,6 +1,6 @@
-import { Chunk } from '../timeline/chunk.interface';
+import { PressureChunk } from '../timeline/environment.class';
 
 export interface IPipe {
   isEligible(): boolean;
-  place(timeline: any): void;
+  place(name: string, env: PressureChunk[]): void;
 }

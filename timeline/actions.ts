@@ -5,6 +5,10 @@ export class AddPotentialities {
   constructor(public potentialities: Potentiality[]) {}
 }
 
+export class Materialize {
+  constructor(public name: string, public potentialities: Potentiality[]) {}
+}
+
 export class InitTimeline {
   constructor(public pipes: IPipe[]) {}
 }
@@ -15,4 +19,4 @@ export class UpdateTimeline {
   ) {}
 }
 
-export type PipelineAction = AddPotentialities | UpdateTimeline | InitTimeline;
+export type PipelineAction = AddPotentialities | UpdateTimeline | InitTimeline | Materialize;
