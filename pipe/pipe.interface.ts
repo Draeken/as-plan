@@ -1,6 +1,6 @@
 import { PressureChunk } from '../timeline/environment.class';
 
 export interface IPipe {
-  isEligible(): boolean;
+  subPipeCount(): number;
   place(name: string, env: PressureChunk[]): void;
 }

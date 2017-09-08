@@ -1,11 +1,13 @@
-import {  } from 'jest';
+import {} from 'jest';
 
 import Builder from '../builder/Builder';
 import { Query } from '../queries/query.interface';
 import { QueryKind, GoalKind, RestrictionCondition } from '../queries/query.enum';
-import { Chunk } from '../timeline/chunk.interface';
+import { Potentiality, Material } from '../timeline/potentiality.interface';
 
 let builder: Builder;
+
+const getHours = (num: number) => num * 3600 * 1000;
 
 beforeEach(() => {
   builder = new Builder();
@@ -19,7 +21,7 @@ describe('builder', () => {
   it('should return an observable of planning', (done) => {
     expect.assertions(1);
     const queries: Query[] = [];
-    builder.build(queries).subscribe((planning: Chunk[]) => {
+    builder.build(queries).subscribe((planning: Material[]) => {
       expect(Array.isArray(planning)).toBeTruthy();
       done();
     });
@@ -33,69 +35,61 @@ describe('builder', () => {
       end: { target: 2 },
       kind: QueryKind.Atomic,
     }];
-    builder.build(queries).subscribe((planning: Chunk[]) => {
+    builder.build(queries).subscribe((planning: Material[]) => {
       expect(planning).toHaveLength(1);
       const plan = planning[0];
-      expect(plan.task).toBeTruthy();
-      expect(plan.task ? plan.task.children : []).toHaveLength(0);
-      expect(plan.start).toBe(0);
-      expect(plan.end).toBe(2);
-      expect(plan.task ? plan.task.name : false).toBe('test');
+
       done();
     });
   });
 
-  it('should handle multiple queries', (done) => {
+  it.only('should handle multiple queries', (done) => {
     expect.assertions(1);
     const queries: Query[] = [{
       name: 'sleep',
-      goal: { kind: GoalKind.Atomic, quantity: 1, time: 24 },
-      duration: { min: 1.5, target: 9 },
+      goal: { kind: GoalKind.Atomic, quantity: 1, time: getHours(24) },
+      duration: { min: getHours(1.5), target: getHours(9) },
       timeRestrictions: {
         hour: { condition: RestrictionCondition.OutRange, ranges: [[10, 20]] },
       },
       kind: QueryKind.Placeholder,
     }, {
       name: 'work',
-      goal: { kind: GoalKind.Atomic, quantity: 1, time: 24 },
-      duration: { target: 10 },
+      goal: { kind: GoalKind.Atomic, quantity: 1, time: getHours(24) },
+      duration: { target: getHours(10) },
       timeRestrictions: {
         hour: {
           condition: RestrictionCondition.InRange,
           ranges: [[7.5, 19.5]],
         },
-        weekday: {
-          condition: RestrictionCondition.InRange,
-          ranges: [[0, 1]],
-        },
       },
       kind: QueryKind.Placeholder,
     }, {
       name: 'diner',
-      goal: { kind: GoalKind.Atomic, quantity: 1, time: 24 },
-      duration: { target: 0.5 },
+      goal: { kind: GoalKind.Atomic, quantity: 1, time: getHours(24) },
+      duration: { target: getHours(0.5) },
       timeRestrictions: {
         hour: { condition: RestrictionCondition.InRange, ranges: [[18, 23]] },
       },
       kind: QueryKind.Placeholder,
     }, {
       name: 'side project',
-      goal: { kind: GoalKind.Splittable, quantity: 2, time: 48, maximize: true },
+      goal: { kind: GoalKind.Splittable, quantity: 2, time: getHours(48) },
       timeRestrictions: {
         hour: {
           condition: RestrictionCondition.OutRange, ranges: [[0, 5]],
         },
       },
-      duration: { min: 0.5 },
+      duration: { min: getHours(0.5), target: getHours(6) },
       kind: QueryKind.Placeholder,
     }, {
       name: 'reading',
-      goal: { kind: GoalKind.Splittable, quantity: 0.5, time: 24 },
-      duration: { min: 0.01 },
+      goal: { kind: GoalKind.Splittable, quantity: 0.5, time: getHours(24) },
+      duration: { min: getHours(0.01), target: getHours(1) },
       kind: QueryKind.Placeholder,
-    }];
-    builder.build(queries).subscribe((planning: Chunk[]) => {
-      expect(planning).toHaveLength(11);
+    }];    
+    builder.build(queries).subscribe((planning: Material[]) => {
+      expect(planning).toHaveLength(9);
       done();
     });
   });

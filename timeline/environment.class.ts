@@ -19,12 +19,16 @@ interface PressurePoint {
 }
 
 export class Environment {
+  static readonly infinity = 9999;
+  static isFinite = (num: number) => { return num < Environment.infinity; };
+
   constructor(stateFn: Observable<Potentiality[]>, private boundConfig: EnvConfig) {
     stateFn.subscribe(this.handleNewPotentialities.bind(this));
   }
 
   private handleNewPotentialities(pots: Potentiality[]): void {
-    const filtered = pots.filter(p => Number.isFinite(p.potentiel));
+    debugger;
+    const filtered = pots.filter(p => Environment.isFinite(p.potentiel));
     if (!filtered.length) { return; }
     const toPlace = filtered.reduce((r1, r2) => r1.potentiel > r2.potentiel ? r1 : r2);
     const pressureEnv = this.computePressureEnvironment(pots);

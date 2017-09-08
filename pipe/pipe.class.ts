@@ -3,7 +3,7 @@ import { GoalKind, RestrictionCondition } from '../queries/query.enum';
 import { Pipeline } from '../timeline/pipes.state';
 import { AddPotentialities, Materialize } from '../timeline/actions';
 import { Potentiality } from '../timeline/potentiality.interface';
-import { PressureChunk } from '../timeline/environment.class';
+import { PressureChunk, Environment } from '../timeline/environment.class';
 import { IPipe } from './pipe.interface';
 import { BoundConfig } from '../builder/Builder';
 
@@ -33,8 +33,8 @@ export class Pipe implements IPipe {
     this.buildSubpipes();
   }
 
-  isEligible() {
-    return this.pipes.some(p => Number.isFinite(p.duration));
+  subPipeCount(): number {
+    return this.pipes.length;
   }
 
   place(name: string, env: PressureChunk[]) {
@@ -53,13 +53,13 @@ export class Pipe implements IPipe {
       name,
       start: r.start,
       end: r.end,
-      potentiel: Infinity,
+      potentiel: Environment.infinity,
       pipe: this,
     }))));
   }
 
   private handleAtomicPlacement(chunks: PressureChunk[], pipe: Subpipe): PressureChunk[] {
-    let bestPlace: PressureChunk = { start: 0, end: 0, pressure: Infinity };
+    let bestPlace: PressureChunk = { start: 0, end: 0, pressure: Environment.infinity };
     const whichBetter = (c: PressureChunk, b: PressureChunk) => {
       if (!pipe.children.some(p => p.start <= c.start && c.end <= p.end)) { return b; }
       return c.pressure < b.pressure ? c : b;
@@ -101,7 +101,7 @@ export class Pipe implements IPipe {
           const actDur = Math.min(cDur, Math.min(c.end, end) - Math.max(c.start, start));
           return actDur * c.pressure / cDur;
         })
-        .reduce((a, b) => a + b);
+        .reduce((a, b) => a + b, 0);
       return { start, end, pressure };
     };
     return [
@@ -112,24 +112,24 @@ export class Pipe implements IPipe {
 
   private buildPermissionMask(): TimeMask[] {
     const tr = this.query.timeRestrictions;
-    if (!tr) { return []; }
     let masks: TimeMask[] = [{
       start: this.config.startMin,
       end: this.config.endMax }];
+    if (!tr) { return masks; }
     if (tr.month) {
       masks = masks
-      .map(this.getMaskFilterFn(tr.month, this.mapMonthRange))
-      .reduce((a, b) => a.concat(b));
+      .map(this.getMaskFilterFn(tr.month, this.mapMonthRange.bind(this)))
+      .reduce((a, b) => a.concat(b), []);
     }
     if (tr.weekday) {
       masks = masks
-      .map(this.getMaskFilterFn(tr.weekday, this.mapWeekdayRange))
-      .reduce((a, b) => a.concat(b));
+      .map(this.getMaskFilterFn(tr.weekday, this.mapWeekdayRange.bind(this)))
+      .reduce((a, b) => a.concat(b), []);
     }
     if (tr.hour) {
       masks = masks
-      .map(this.getMaskFilterFn(tr.hour, this.mapHourRange))
-      .reduce((a, b) => a.concat(b));
+      .map(this.getMaskFilterFn(tr.hour, this.mapHourRange.bind(this)))
+      .reduce((a, b) => a.concat(b), []);
     }
     return masks;
   }
@@ -146,7 +146,7 @@ export class Pipe implements IPipe {
         result.push({ ...currentRange });
       }
       return result;
-    }).reduce((a, b) => a.concat(b));
+    }).reduce((a, b) => a.concat(b), []);
   }
 
   private getFirstHourRange(range: TimeMask, timeMask: TimeMask): TimeMask {
@@ -155,8 +155,9 @@ export class Pipe implements IPipe {
     let date = +startDate - 24 * 3600 * 1000;
     let hour = startDate.getHours();
     const getNextHour = (target: number) => {
-      while (hour !== target) {
-        hour += (hour + 1) % 24;
+      const intTarget = Math.floor(target);
+      while (hour !== intTarget) {
+        hour = (hour + 1) % 24;
         date += 3600 * 1000;
       }
     };
@@ -179,7 +180,7 @@ export class Pipe implements IPipe {
         result.push({ ...currentRange });
       }
       return result;
-    }).reduce((a, b) => a.concat(b));
+    }).reduce((a, b) => a.concat(b), []);
   }
 
   private getFirstWeekdayRange(range: TimeMask, timeMask: TimeMask): TimeMask {
@@ -188,8 +189,9 @@ export class Pipe implements IPipe {
     let date = +startDate - 7 * 24 * 3600 * 1000;
     let day = startDate.getDay();
     const getNextDay = (target: number) => {
-      while (day !== target) {
-        day += (day + 1) % 7;
+      const intTarget = Math.floor(target);
+      while (day !== intTarget) {
+        day = (day + 1) % 7;
         date += 24 * 3600 * 1000;
       }
     };
@@ -262,18 +264,23 @@ export class Pipe implements IPipe {
   }
 
   private buildSubpipes(): void {
-    const subPipes: Subpipe[] = [];
-    subPipes.concat(this.handleGoal(), this.handleAtomic());
+    const subPipes: Subpipe[] = this.computeSubPipes();
     const permissionMask = this.buildPermissionMask();
     subPipes.forEach(s => s.children = this.maskRangeUnion(permissionMask, s.children[0]));
+    this.pipes = subPipes;
     this.pipeline.actions.next(new AddPotentialities(subPipes
-      .map(this.subPipeToPotentiality)
-      .reduce((a, b) => a.concat(b))));
+      .map(p => this.subPipeToPotentiality(p))
+      .reduce((a, b) => a.concat(b), [])));
+  }
+
+  private computeSubPipes() {
+    let result = this.handleGoal();
+    if (!result.length) { result = this.handleAtomic(); }
+    return result;
   }
 
   private subPipeToPotentiality(subpipe: Subpipe): Potentiality[] {
-    console.log('this must be Pipe', this);
-    const availableSpace = subpipe.children.map(s => s.end - s.start).reduce((a, b) => a + b);
+    const availableSpace = subpipe.children.map(s => s.end - s.start).reduce((a, b) => a + b, 0);
     return subpipe.children.map(child => ({
       start: child.start,
       end: child.end,

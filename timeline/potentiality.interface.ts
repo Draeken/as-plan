@@ -7,3 +7,9 @@ export interface Potentiality {
   name: string;
   potentiel: number;
 }
+
+export interface Material {
+  start: Date;
+  end: Date;
+  name: string;
+}
