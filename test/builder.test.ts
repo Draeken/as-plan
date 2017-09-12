@@ -74,20 +74,18 @@ describe('builder', () => {
       kind: QueryKind.Placeholder,
     }, {
       name: 'side project',
-      goal: { kind: GoalKind.Splittable, quantity: 2, time: getHours(48) },
+      goal: { kind: GoalKind.Splittable, quantity: getHours(1.5), time: getHours(24) },
       timeRestrictions: {
         hour: {
           condition: RestrictionCondition.OutRange, ranges: [[0, 5]],
         },
       },
-      duration: { min: getHours(0.5), target: getHours(6) },
       kind: QueryKind.Placeholder,
     }, {
       name: 'reading',
-      goal: { kind: GoalKind.Splittable, quantity: 0.5, time: getHours(24) },
-      duration: { min: getHours(0.01), target: getHours(1) },
+      goal: { kind: GoalKind.Splittable, quantity: getHours(0.5), time: getHours(24) },
       kind: QueryKind.Placeholder,
-    }];    
+    }];
     builder.build(queries).subscribe((planning: Material[]) => {
       expect(planning).toHaveLength(9);
       done();

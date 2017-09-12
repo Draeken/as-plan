@@ -1,8 +1,11 @@
+import { Subject } from 'rxjs/Subject';
+import { Observable } from 'rxjs/Observable';
+
 import { Query, TimeRestriction } from '../queries/query.interface';
 import { GoalKind, RestrictionCondition } from '../queries/query.enum';
 import { Pipeline } from '../timeline/pipes.state';
-import { AddPotentialities, Materialize } from '../timeline/actions';
-import { Potentiality } from '../timeline/potentiality.interface';
+import { PipelineAction, AddPotentialities, Materialize } from '../timeline/actions';
+import { Potentiality, Material } from '../timeline/potentiality.interface';
 import { PressureChunk, Environment } from '../timeline/environment.class';
 import { IPipe } from './pipe.interface';
 import { BoundConfig } from '../builder/Builder';
@@ -14,6 +17,7 @@ interface Subpipe {
   name: string;
   children: TimeMask[];
   duration: number;
+  potentiel: number;
 }
 
 interface TimeMask {
@@ -27,14 +31,25 @@ type mapRange = (r: TimeMask[], tm: TimeMask) => TimeMask[];
 export class Pipe implements IPipe {
   private pipes: Subpipe[] = [];
   private isSplittable: boolean;
+  private potentialities: Observable<Potentiality[]>;
 
-  constructor(private query: Query, private pipeline: Pipeline, private config: PipeConfig) {
+  constructor(
+    private config: PipeConfig,
+    private query: Query,
+    private actions: Subject<Material[]>,
+    private pipeline: Observable<Material[]>,
+  ) {
     this.isSplittable = query.goal ? query.goal.kind === GoalKind.Splittable : false;
     this.buildSubpipes();
+    this.handleNewPipeline();
   }
 
   subPipeCount(): number {
     return this.pipes.length;
+  }
+
+  getPotentiel(): Observable<Potentiality[]> {
+    return this.potentialities;
   }
 
   place(name: string, env: PressureChunk[]) {
@@ -49,13 +64,15 @@ export class Pipe implements IPipe {
     } else {
       result = this.handleAtomicPlacement(chunks, pipe);
     }
-    this.pipeline.actions.next(new Materialize(name, result.map(r => ({
+    this.actions.next(result.map(r => ({
       name,
-      start: r.start,
-      end: r.end,
-      potentiel: Environment.infinity,
-      pipe: this,
-    }))));
+      start: new Date(r.start),
+      end: new Date(r.end),
+    })));
+  }
+
+  private handleNewPipeline(): void {
+
   }
 
   private handleAtomicPlacement(chunks: PressureChunk[], pipe: Subpipe): PressureChunk[] {
@@ -267,10 +284,7 @@ export class Pipe implements IPipe {
     const subPipes: Subpipe[] = this.computeSubPipes();
     const permissionMask = this.buildPermissionMask();
     subPipes.forEach(s => s.children = this.maskRangeUnion(permissionMask, s.children[0]));
-    this.pipes = subPipes;
-    this.pipeline.actions.next(new AddPotentialities(subPipes
-      .map(p => this.subPipeToPotentiality(p))
-      .reduce((a, b) => a.concat(b), [])));
+    this.pipes = subPipes.map(this.computePotentiel);
   }
 
   private computeSubPipes() {
@@ -279,8 +293,19 @@ export class Pipe implements IPipe {
     return result;
   }
 
+  private computePotentiel(subpipe: Subpipe): Subpipe {
+    const availableSpace = subpipe.children.map(s => s.end - s.start).reduce((a, b) => a + b, 0);
+    return {
+      ...subpipe,
+      potentiel: subpipe.duration / availableSpace,
+    };
+  }
+
   private subPipeToPotentiality(subpipe: Subpipe): Potentiality[] {
     const availableSpace = subpipe.children.map(s => s.end - s.start).reduce((a, b) => a + b, 0);
+    console.log(`name: ${subpipe.name};
+      duration: ${subpipe.duration / 60000};
+      space: ${availableSpace / 60000};`);
     return subpipe.children.map(child => ({
       start: child.start,
       end: child.end,
@@ -324,6 +349,7 @@ export class Pipe implements IPipe {
       duration,
       children: [mask],
       name: `${query.name}-goal-${i}`,
+      potentiel: -1,
     }));
   }
 
@@ -351,6 +377,7 @@ export class Pipe implements IPipe {
       duration,
       children,
       name: `${query.name}-atomic`,
+      potentiel: -1,
     }];
   }
 

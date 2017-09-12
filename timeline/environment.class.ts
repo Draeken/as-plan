@@ -26,12 +26,12 @@ export class Environment {
     stateFn.subscribe(this.handleNewPotentialities.bind(this));
   }
 
-  private handleNewPotentialities(pots: Potentiality[]): void {
+  private handleNewPotentialities(potentialities: Potentiality[]): void {
     debugger;
-    const filtered = pots.filter(p => Environment.isFinite(p.potentiel));
+    const filtered = potentialities.filter(p => Environment.isFinite(p.potentiel));
     if (!filtered.length) { return; }
     const toPlace = filtered.reduce((r1, r2) => r1.potentiel > r2.potentiel ? r1 : r2);
-    const pressureEnv = this.computePressureEnvironment(pots);
+    const pressureEnv = this.computePressureEnvironment(potentialities);
     toPlace.pipe.place(toPlace.name, pressureEnv);
   }
 
