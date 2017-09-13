@@ -1,5 +1,7 @@
 import {} from 'jest';
 
+import 'rxjs/add/operator/filter';
+
 import Builder from '../builder/Builder';
 import { Query } from '../queries/query.interface';
 import { QueryKind, GoalKind, RestrictionCondition } from '../queries/query.enum';
@@ -31,11 +33,11 @@ describe('builder', () => {
     expect.assertions(1);
     const queries: Query[] = [{
       name: 'test',
-      start: { target: 0 },
-      end: { target: 2 },
+      start: { target: +new Date() },
+      end: { target: +new Date() + getHours(1) },
       kind: QueryKind.Atomic,
     }];
-    builder.build(queries).subscribe((planning: Material[]) => {
+    builder.build(queries).filter(q => q.length === 1).subscribe((planning: Material[]) => {
       expect(planning).toHaveLength(1);
       const plan = planning[0];
 
@@ -43,7 +45,7 @@ describe('builder', () => {
     });
   });
 
-  it.only('should handle multiple queries', (done) => {
+  it('should handle multiple queries', (done) => {
     expect.assertions(1);
     const queries: Query[] = [{
       name: 'sleep',
@@ -87,7 +89,7 @@ describe('builder', () => {
       kind: QueryKind.Placeholder,
     }];
     builder.build(queries).subscribe((planning: Material[]) => {
-      expect(planning).toHaveLength(9);
+      expect(planning).toHaveLength(6);
       done();
     });
   });

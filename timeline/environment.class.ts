@@ -28,9 +28,9 @@ export class Environment {
 
   private handleNewPotentialities(potentialities: Potentiality[]): void {
     debugger;
-    const filtered = potentialities.filter(p => Environment.isFinite(p.potentiel));
-    if (!filtered.length) { return; }
-    const toPlace = filtered.reduce((r1, r2) => r1.potentiel > r2.potentiel ? r1 : r2);
+    console.log('env handle pots', potentialities);
+    if (!potentialities.length) { return; }
+    const toPlace = potentialities.reduce((r1, r2) => r1.potentiel > r2.potentiel ? r1 : r2);
     const pressureEnv = this.computePressureEnvironment(potentialities);
     toPlace.pipe.place(toPlace.name, pressureEnv);
   }

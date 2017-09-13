@@ -31,17 +31,17 @@ type mapRange = (r: TimeMask[], tm: TimeMask) => TimeMask[];
 export class Pipe implements IPipe {
   private pipes: Subpipe[] = [];
   private isSplittable: boolean;
-  private potentialities: Observable<Potentiality[]>;
+  private potentialities: Subject<Potentiality[]> = new Subject();
 
   constructor(
     private config: PipeConfig,
     private query: Query,
     private actions: Subject<Material[]>,
-    private pipeline: Observable<Material[]>,
+    pipeline: Observable<Material[]>,
   ) {
     this.isSplittable = query.goal ? query.goal.kind === GoalKind.Splittable : false;
     this.buildSubpipes();
-    this.handleNewPipeline();
+    pipeline.subscribe(m => this.handleNewPipeline(m));
   }
 
   subPipeCount(): number {
@@ -53,7 +53,8 @@ export class Pipe implements IPipe {
   }
 
   place(name: string, env: PressureChunk[]) {
-    const pipe = this.pipes.find(p => p.name === name);
+    console.log('place', name);
+    const pipe = this.findAndRemove(name);
     if (!pipe) { console.warn(`Pipe ${name} not found.`); return; }
     let result: PressureChunk[] = [];
     const chunks = env
@@ -71,8 +72,43 @@ export class Pipe implements IPipe {
     })));
   }
 
-  private handleNewPipeline(): void {
+  private findAndRemove(name: string): Subpipe | undefined {
+    const pipeI = this.pipes.findIndex(p => p.name === name);
+    if (pipeI === -1) return;
+    const pipe = this.pipes[pipeI];
+    this.pipes.splice(pipeI, 1);
+    return pipe;
+  }
 
+  private handleNewPipeline(materials: Material[]): void {
+    this.updateSubpipes(materials.map(m => ({
+      start: +m.start,
+      end: +m.end,
+    })));
+    const result = this.pipes.map((sp) => {
+      return sp.children.map(c => ({
+        start: c.start,
+        end: c.end,
+        name: sp.name,
+        potentiel: sp.potentiel,
+        pipe: this,
+      }));
+    }).reduce((a, b) => a.concat(b), []);
+    //console.log('handle new pipeline', result);
+    console.log('materials count: ', materials.length);
+    this.potentialities.next(result);
+  }
+
+  private updateSubpipes(mask: TimeMask[]): void {
+    const inboundMask = this.convertOutboundToInbound(
+      { start: this.config.startMin, end: this.config.endMax },
+      mask);
+    this.pipes.forEach((p) => {
+      p.children = p.children
+        .map(c => this.maskRangeUnion(inboundMask, c))
+        .reduce((a, b) => a.concat(b), []);
+    });
+    this.pipes = this.pipes.map(this.computePotentiel);
   }
 
   private handleAtomicPlacement(chunks: PressureChunk[], pipe: Subpipe): PressureChunk[] {
@@ -285,6 +321,7 @@ export class Pipe implements IPipe {
     const permissionMask = this.buildPermissionMask();
     subPipes.forEach(s => s.children = this.maskRangeUnion(permissionMask, s.children[0]));
     this.pipes = subPipes.map(this.computePotentiel);
+    console.log('build pipes', this.pipes);
   }
 
   private computeSubPipes() {
