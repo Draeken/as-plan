@@ -2,18 +2,13 @@ import { Observable } from 'rxjs/Observable';
 import { Subject } from 'rxjs/Subject';
 import { BehaviorSubject } from 'rxjs/BehaviorSubject';
 
-import 'rxjs/add/observable/of';
 import 'rxjs/add/observable/zip';
-import 'rxjs/add/operator/filter';
-import 'rxjs/add/operator/startWith';
 import 'rxjs/add/operator/map';
 import 'rxjs/add/operator/scan';
-import 'rxjs/add/operator/do';
 
 import asLogger from '../asLogger';
 import { Query } from '../queries/query.interface';
 import { Pipe } from '../pipe/pipe.class';
-import { Pipeline } from '../timeline/pipes.state';
 import { Environment } from '../timeline/environment.class';
 import { Potentiality, Material } from '../timeline/potentiality.interface';
 
@@ -29,7 +24,6 @@ export default class Builder {
   }
 
   private mapPotentialities(...pots: Potentiality[][]) {
-    console.log('map pots', pots);
     return pots.reduce((a, b) => a.concat(b), []);
   }
 
@@ -58,7 +52,6 @@ export default class Builder {
       this.mapPotentialities);
     const env = new Environment(potentialities, boundConfig);
     const taskCount = pipes.map(p => p.subPipeCount()).reduce((a, b) => a + b, 0);
-    console.log('task count: ', taskCount);
     actions.next([]);
 
     return result;

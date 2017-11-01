@@ -9,9 +9,7 @@ export interface PressureChunk {
   pressure: number;
 }
 
-interface EnvConfig extends BoundConfig {
-
-}
+interface EnvConfig extends BoundConfig { }
 
 interface PressurePoint {
   time: number;
@@ -27,8 +25,6 @@ export class Environment {
   }
 
   private handleNewPotentialities(potentialities: Potentiality[]): void {
-    debugger;
-    console.log('env handle pots', potentialities);
     if (!potentialities.length) { return; }
     const toPlace = potentialities.reduce((r1, r2) => r1.potentiel > r2.potentiel ? r1 : r2);
     const pressureEnv = this.computePressureEnvironment(potentialities);

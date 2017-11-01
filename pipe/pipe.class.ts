@@ -3,8 +3,6 @@ import { Observable } from 'rxjs/Observable';
 
 import { Query, TimeRestriction } from '../queries/query.interface';
 import { GoalKind, RestrictionCondition } from '../queries/query.enum';
-import { Pipeline } from '../timeline/pipes.state';
-import { PipelineAction, AddPotentialities, Materialize } from '../timeline/actions';
 import { Potentiality, Material } from '../timeline/potentiality.interface';
 import { PressureChunk, Environment } from '../timeline/environment.class';
 import { IPipe } from './pipe.interface';
@@ -53,7 +51,6 @@ export class Pipe implements IPipe {
   }
 
   place(name: string, env: PressureChunk[]) {
-    console.log('place', name);
     const pipe = this.findAndRemove(name);
     if (!pipe) { console.warn(`Pipe ${name} not found.`); return; }
     let result: PressureChunk[] = [];
@@ -94,8 +91,6 @@ export class Pipe implements IPipe {
         pipe: this,
       }));
     }).reduce((a, b) => a.concat(b), []);
-    //console.log('handle new pipeline', result);
-    console.log('materials count: ', materials.length);
     this.potentialities.next(result);
   }
 
@@ -321,7 +316,6 @@ export class Pipe implements IPipe {
     const permissionMask = this.buildPermissionMask();
     subPipes.forEach(s => s.children = this.maskRangeUnion(permissionMask, s.children[0]));
     this.pipes = subPipes.map(this.computePotentiel);
-    console.log('build pipes', this.pipes);
   }
 
   private computeSubPipes() {
@@ -340,9 +334,6 @@ export class Pipe implements IPipe {
 
   private subPipeToPotentiality(subpipe: Subpipe): Potentiality[] {
     const availableSpace = subpipe.children.map(s => s.end - s.start).reduce((a, b) => a + b, 0);
-    console.log(`name: ${subpipe.name};
-      duration: ${subpipe.duration / 60000};
-      space: ${availableSpace / 60000};`);
     return subpipe.children.map(child => ({
       start: child.start,
       end: child.end,
