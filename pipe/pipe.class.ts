@@ -181,11 +181,25 @@ export class Pipe implements IPipe {
     }
     return masks;
   }
-
-  private mapHourRange(ranges: TimeMask[], timeMask: TimeMask): TimeMask[] {
-    return ranges.map((range) => {
+  /**
+   * timeRestrict: [{start: 5.75, end: 7}]
+   * timeMask: { start: 9 nov, 8h, end: 11nov, 10h }
+   *
+   * end: 11 nov, 23h59
+   * currentRange: { 8nov, 05h45, end: 8nov, 07h00 }
+   * result [
+   *  { 8nov, 05h45, end: 8nov, 07h00 },
+   *  { 9nov, 05h45, end: 9nov, 07h00 },
+   *  { 10nov, 05h45, end: 10nov, 07h00 },
+   *  { 11nov, 05h45, end: 11nov, 07h00 },
+   *  { 12nov, 05h45, end: 12nov, 07h00 },
+   * ]
+   * Why compute one day before and one day after ? Are there any cases ?
+   */
+  private mapHourRange(timeRestrics: TimeMask[], timeMask: TimeMask): TimeMask[] {
+    return timeRestrics.map((restrict) => {
       const end = new Date(timeMask.end).setHours(23, 59, 59, 999);
-      const currentRange = this.getFirstHourRange(range, timeMask);
+      const currentRange = this.getFirstHourRange(restrict, timeMask);
       const result: TimeMask[] = [];
       result.push({ ...currentRange });
       while (currentRange.start < end) {
@@ -197,7 +211,28 @@ export class Pipe implements IPipe {
     }).reduce((a, b) => a.concat(b), []);
   }
 
-  private getFirstHourRange(range: TimeMask, timeMask: TimeMask): TimeMask {
+  /**
+   * restrict: {start: 5.75, end: 7}
+   * timeMask: { start: 9 nov, 8h, end: 11nov, 10h }
+   *
+   * startDate: 9nov, 0h00
+   * date <- 8nov, 0h00
+   * hour = 0
+   *
+   * getNextHour(5.75)
+   * hour = 0 + 5
+   * date = 8nov, 05h00
+   *
+   * start <- 8nov, 05h45
+   *
+   * getNextHour(7)
+   * hour = 5 + 2
+   * date = 8nov, 07h00
+   * end <- 8nov, 07h00
+   *
+   * return { 8nov, 05h45, end: 8nov, 07h00 }
+   */
+  private getFirstHourRange(restrict: TimeMask, timeMask: TimeMask): TimeMask {
     const startDate = new Date(timeMask.start);
     startDate.setHours(0, 0, 0, 0);
     let date = +startDate - 24 * 3600 * 1000;
@@ -209,10 +244,10 @@ export class Pipe implements IPipe {
         date += 3600 * 1000;
       }
     };
-    getNextHour(range.start);
-    const start = date + (range.start % 1) * 3600 * 1000;
-    getNextHour(range.end);
-    const end = date + (range.end % 1) * 3600 * 1000;
+    getNextHour(restrict.start);
+    const start = date + (restrict.start % 1) * 3600 * 1000;
+    getNextHour(restrict.end);
+    const end = date + (restrict.end % 1) * 3600 * 1000;
     return { start, end };
   }
 
@@ -287,6 +322,31 @@ export class Pipe implements IPipe {
     };
   }
 
+/*
+ * ranges: [
+ *  { start: 8nov, 05h45, end: 8nov, 07h00 },
+ *  { start: 9nov, 05h45, end: 9nov, 07h00 },
+ *  { start: 10nov, 05h45, end: 10nov, 07h00 },
+ *  { start: 11nov, 05h45, end: 11nov, 07h00 },
+ *  { start: 12nov, 05h45, end: 12nov, 07h00 },
+ * ]
+ * mask: { start: 9 nov, 8h, end: 11nov, 10h }
+ *
+ * filter:
+ * [
+ *  { start: 9nov, 05h45, end: 9nov, 07h00 },
+ *  { start: 10nov, 05h45, end: 10nov, 07h00 },
+ *  { start: 11nov, 05h45, end: 11nov, 07h00 },
+ * ]
+ * Already sorted
+ *
+ * return: [
+ *  { start: 9nov, 08h00 end: 9nov, 07h00 }
+ *  { start: 10nov, 08h00 end: 10nov, 07h00 }
+ *  { start: 11nov, 08h00 end: 11nov, 07h00 }
+ * ]
+ * Compute min/max 3times more than necessary
+ */
   private maskRangeUnion(ranges: TimeMask[], mask: TimeMask): TimeMask[] {
     return ranges
       .filter(r => r.start < mask.end && r.end > mask.start)

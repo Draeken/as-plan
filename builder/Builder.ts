@@ -51,7 +51,6 @@ export default class Builder {
       ...pipes.map(p => p.getPotentiel()),
       this.mapPotentialities);
     const env = new Environment(potentialities, boundConfig);
-    const taskCount = pipes.map(p => p.subPipeCount()).reduce((a, b) => a + b, 0);
     actions.next([]);
 
     return result;
